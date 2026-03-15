@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Danh sách yêu thích - Smart Bookstore{% endblock %}
+{% block content %}
+<h1 class="mb-4">Danh sách yêu thích</h1>
+{% if wishlist_items %}
+<div class="row row-cols-1 row-cols-md-4 g-4">
+    {% for item in wishlist_items %}
+    <div class="col">
+        <div class="card h-100">
+            {% if item.book.cover_image %}
+            <img src="{{ item.book.cover_image }}" class="card-img-top" alt="{{ item.book.title }}" style="height:200px;object-fit:cover">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title"><a href="{% url 'book_detail' item.book.pk %}">{{ item.book.title }}</a></h5>
+                <p class="card-text text-muted">{{ item.book.author }}</p>
+                <p class="fw-bold">{{ item.book.price|floatformat:0 }}₫</p>
+                <a href="{% url 'book_detail' item.book.pk %}" class="btn btn-primary btn-sm">Xem</a>
+                <form action="{% url 'wishlist_remove' item.book.pk %}?next={% url 'wishlist' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Bỏ yêu thích</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">Bạn chưa thêm sách nào vào danh sách yêu thích.</p>
+<a href="{% url 'book_list' %}" class="btn btn-primary">Khám phá sách</a>
+{% endif %}
+{% endblock %}

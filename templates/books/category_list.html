@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Thể loại - Smart Bookstore{% endblock %}
+{% block content %}
+<h1 class="fw-bold text-dark mb-4">Duyệt theo thể loại</h1>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for c in categories %}
+    <div class="col">
+        <div class="card card-book h-100">
+            <div class="card-body">
+                <h5 class="card-title"><a href="{% url 'category_detail' c.pk %}">{{ c.name }}</a></h5>
+                <p class="card-text text-muted">{{ c.book_count }} sách</p>
+                <a href="{% url 'category_detail' c.pk %}" class="btn btn-primary btn-sm">Xem sách</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="empty-state"><p class="mb-0">Chưa có thể loại nào. Chạy <code>python manage.py seed_books</code> để thêm dữ liệu.</p></div></div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} - Smart Bookstore{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Trang chủ</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'category_list' %}">Thể loại</a></li>
+        <li class="breadcrumb-item active">{{ category.name }}</li>
+    </ol>
+</nav>
+<h1 class="fw-bold text-dark mb-4">{{ category.name }}</h1>
+<form method="get" class="mb-3">
+    <input type="hidden" name="page" value="1">
+    <select name="sort" class="form-select form-select-sm w-auto d-inline-block" onchange="this.form.submit()">
+        <option value="title" {% if current_sort == "title" %}selected{% endif %}>Tên A-Z</option>
+        <option value="price_asc" {% if current_sort == "price_asc" %}selected{% endif %}>Giá thấp → cao</option>
+        <option value="price_desc" {% if current_sort == "price_desc" %}selected{% endif %}>Giá cao → thấp</option>
+        <option value="newest" {% if current_sort == "newest" %}selected{% endif %}>Mới nhất</option>
+        <option value="popular" {% if current_sort == "popular" %}selected{% endif %}>Bán chạy</option>
+        <option value="top_rated" {% if current_sort == "top_rated" %}selected{% endif %}>Đánh giá cao</option>
+    </select>
+</form>
+<div class="row row-cols-2 row-cols-md-4 g-4 mb-4">
+    {% for book in books %}
+    <div class="col">
+        <div class="card card-book h-100">
+            <a href="{% url 'book_detail' book.pk %}">
+                {% if book.cover_image %}
+                <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted">📖</div>
+                {% endif %}
+            </a>
+            <div class="card-body">
+                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
+                <p class="card-text text-muted small">{{ book.author }}</p>
+                <p class="price">{{ book.price|floatformat:0 }}₫</p>
+                <a href="{% url 'book_detail' book.pk %}" class="btn btn-sm btn-primary">Chi tiết</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="empty-state"><p class="mb-0">Chưa có sách trong thể loại này.</p></div></div>
+    {% endfor %}
+</div>
+{% if page.has_other_pages %}
+<nav>
+    <ul class="pagination justify-content-center">
+        {% if page.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}&sort={{ current_sort }}">Trước</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Trang {{ page.number }}/{{ page.paginator.num_pages }}</span></li>
+        {% if page.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}&sort={{ current_sort }}">Sau</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

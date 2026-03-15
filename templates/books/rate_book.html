@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Đánh giá: {{ book.title }} - Smart Bookstore{% endblock %}
+{% block content %}
+<h2>Đánh giá: {{ book.title }}</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Lưu đánh giá</button>
+    <a href="{% url 'book_detail' book.pk %}" class="btn btn-outline-secondary">Quay lại</a>
+</form>
+{% endblock %}

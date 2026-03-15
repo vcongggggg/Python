@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Giỏ hàng - Smart Bookstore{% endblock %}
+{% block content %}
+<h2 class="mb-4">Giỏ hàng</h2>
+{% if cart_items %}
+<form method="post" action="{% url 'update_cart' %}">
+    {% csrf_token %}
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Sách</th>
+                <th>Giá</th>
+                <th>Số lượng</th>
+                <th>Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in cart_items %}
+            <tr>
+                <td>
+                    <a href="{% url 'book_detail' row.book.pk %}">{{ row.book.title }}</a>
+                    <br><small class="text-muted">{{ row.book.author }}</small>
+                </td>
+                <td>{{ row.book.price|floatformat:0 }}₫</td>
+                <td>
+                    <input type="number" name="qty_{{ row.book.pk }}" value="{{ row.quantity }}" min="1" class="form-control form-control-sm" style="width:80px">
+                </td>
+                <td>{{ row.subtotal|floatformat:0 }}₫</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="fw-bold">Tổng: {{ cart_total|floatformat:0 }}₫</p>
+    <button type="submit" class="btn btn-outline-secondary me-2">Cập nhật giỏ</button>
+    {% if user.is_authenticated %}
+    <a href="{% url 'checkout' %}" class="btn btn-success">Thanh toán (đặt hàng)</a>
+    {% else %}
+    <a href="{% url 'login' %}?next={% url 'cart' %}" class="btn btn-success">Đăng nhập để đặt hàng</a>
+    {% endif %}
+</form>
+{% else %}
+<p class="text-muted">Giỏ hàng trống.</p>
+<a href="{% url 'home' %}" class="btn btn-primary">Mua sắm</a>
+{% endif %}
+{% endblock %}

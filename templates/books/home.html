@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ - Smart Bookstore{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h1 class="fw-bold text-dark mb-2">Chào mừng đến Smart Bookstore</h1>
+    <p class="text-secondary mb-3">Khám phá sách hay với gợi ý thông minh dành cho bạn.</p>
+    <a href="{% url 'book_list' %}" class="btn btn-primary me-2">Tất cả sách</a>
+    <a href="{% url 'category_list' %}" class="btn btn-outline-primary">Duyệt theo thể loại</a>
+</div>
+
+<h2 class="section-title">Sách mới thêm</h2>
+<div class="row row-cols-2 row-cols-md-4 row-cols-lg-4 g-4 mb-5">
+    {% for book in books %}
+    <div class="col">
+        <div class="card card-book h-100">
+            <a href="{% url 'book_detail' book.pk %}">
+                {% if book.cover_image %}
+                <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted">📖</div>
+                {% endif %}
+            </a>
+            <div class="card-body">
+                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
+                <p class="card-text text-muted small mb-1">{{ book.author }}</p>
+                <p class="card-text price mb-2">{{ book.price|floatformat:0 }}₫</p>
+                <a href="{% url 'book_detail' book.pk %}" class="btn btn-sm btn-primary me-1">Chi tiết</a>
+                <form action="{% url 'add_to_cart' book.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="btn btn-sm btn-outline-success">Thêm giỏ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state">
+            <p class="mb-0">Chưa có sách nào. Chạy lệnh <code>python manage.py seed_books</code> để thêm dữ liệu mẫu.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if recently_viewed %}
+<h2 class="section-title">Đã xem gần đây</h2>
+<div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 mb-5">
+    {% for book in recently_viewed %}
+    <div class="col">
+        <div class="card card-book h-100">
+            <a href="{% url 'book_detail' book.pk %}">
+                {% if book.cover_image %}
+                <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted">📖</div>
+                {% endif %}
+            </a>
+            <div class="card-body">
+                <h6 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:6 }}</a></h6>
+                <p class="card-text text-muted small">{{ book.author }}</p>
+                <a href="{% url 'book_detail' book.pk %}" class="btn btn-sm btn-outline-primary">Xem lại</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h2 class="section-title">Sách bán chạy</h2>
+<div class="row row-cols-2 row-cols-md-4 row-cols-lg-4 g-4 mb-5">
+    {% for book in popular_books %}
+    <div class="col">
+        <div class="card card-book h-100">
+            <a href="{% url 'book_detail' book.pk %}">
+                {% if book.cover_image %}
+                <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted">📖</div>
+                {% endif %}
+            </a>
+            <div class="card-body">
+                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
+                <p class="card-text text-muted small">{{ book.author }}</p>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="empty-state"><p class="mb-0">Chưa có dữ liệu bán chạy.</p></div></div>
+    {% endfor %}
+</div>
+
+<h2 class="section-title">Sách được đánh giá cao</h2>
+<div class="row row-cols-2 row-cols-md-4 row-cols-lg-4 g-4 mb-5">
+    {% for book in top_rated_books %}
+    <div class="col">
+        <div class="card card-book h-100">
+            <a href="{% url 'book_detail' book.pk %}">
+                {% if book.cover_image %}
+                <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted">📖</div>
+                {% endif %}
+            </a>
+            <div class="card-body">
+                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
+                <p class="card-text text-muted small">{{ book.author }}</p>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="empty-state"><p class="mb-0">Chưa có dữ liệu đánh giá.</p></div></div>
+    {% endfor %}
+</div>
+
+{% if recommended_books %}
+<h2 class="section-title">Gợi ý cho bạn</h2>
+<div class="row row-cols-2 row-cols-md-4 row-cols-lg-4 g-4 mb-5">
+    {% for book in recommended_books %}
+    <div class="col">
+        <div class="card card-book h-100">
+            <a href="{% url 'book_detail' book.pk %}">
+                {% if book.cover_image %}
+                <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted">📖</div>
+                {% endif %}
+            </a>
+            <div class="card-body">
+                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
+                <p class="card-text text-muted small">{{ book.author }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
