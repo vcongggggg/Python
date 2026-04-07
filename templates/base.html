@@ -39,6 +39,20 @@
             --transition: all .3s cubic-bezier(.4,0,.2,1);
         }
 
+        [data-theme="dark"] {
+            --bg-body: #0F172A;
+            --bg-card: #1E293B;
+            --text-primary: #F8FAFC;
+            --text-secondary: #CBD5E1;
+            --text-muted: #64748B;
+            --border: #334155;
+            --glass: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.3);
+            --shadow-md: 0 8px 24px rgba(0,0,0,.4);
+            --shadow-lg: 0 16px 48px rgba(0,0,0,.5);
+        }
+
         * { box-sizing: border-box; }
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -78,26 +92,41 @@
             letter-spacing: -.5px;
         }
         .navbar-bs .nav-link {
-            color: var(--text-secondary) !important;
-            font-weight: 500;
-            font-size: .925rem;
-            padding: .5rem .85rem !important;
+            color: var(--text-primary) !important;
+            font-weight: 600;
+            font-size: .9rem;
+            padding: .6rem .8rem !important;
             border-radius: var(--radius-sm);
             transition: var(--transition);
             position: relative;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .navbar-bs .nav-link i {
+            font-size: 1.1rem;
+            transition: var(--transition);
+        }
+        [data-theme="dark"] .navbar-bs .nav-link i {
+            color: var(--primary-light);
+            filter: drop-shadow(0 0 5px rgba(162,155,254,.3));
         }
         .navbar-bs .nav-link:hover,
         .navbar-bs .nav-link.active {
             color: var(--primary) !important;
-            background: rgba(108,92,231,.06);
+            background: rgba(108,92,231,.08);
+        }
+        .navbar-bs .nav-link:hover i {
+            transform: scale(1.1);
         }
         .navbar-bs .badge {
             background: var(--gradient-2) !important;
-            font-size: .7rem;
-            padding: .25em .55em;
+            font-size: .65rem;
+            padding: .2rem .5rem;
             border-radius: 20px;
             color: #fff;
-            font-weight: 700;
+            font-weight: 800;
+            margin-left: -2px;
         }
 
         /* ───── Search bar ───── */
@@ -108,16 +137,17 @@
             border: 2px solid var(--border);
             border-radius: 50px;
             padding: .5rem 1rem .5rem 2.5rem;
-            width: 240px;
-            font-size: .9rem;
+            width: 180px;
+            font-size: .85rem;
             transition: var(--transition);
             background: var(--bg-body);
+            color: var(--text-primary);
         }
         .search-wrapper input:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 4px rgba(108,92,231,.12);
             outline: none;
-            width: 300px;
+            width: 260px;
         }
         .search-wrapper .search-icon {
             position: absolute;
@@ -133,7 +163,7 @@
             top: calc(100% + 8px);
             left: 0;
             right: 0;
-            background: #fff;
+            background: var(--bg-card);
             border-radius: var(--radius);
             box-shadow: var(--shadow-lg);
             max-height: 400px;
@@ -303,7 +333,7 @@
             transition: var(--transition);
         }
         .btn-glass:hover {
-            background: #fff;
+            background: var(--bg-body);
             box-shadow: var(--shadow-sm);
         }
         .btn-icon {
@@ -374,10 +404,11 @@
             padding: 1.5rem;
         }
         .white-panel {
-            background: #fff;
+            background: var(--bg-card);
             border-radius: var(--radius);
             padding: 1.5rem;
             box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
         }
 
         /* ───── Stars ───── */
@@ -407,7 +438,7 @@
             z-index: 9999;
         }
         .toast-bs {
-            background: #fff;
+            background: var(--bg-card);
             border-radius: var(--radius-sm);
             box-shadow: var(--shadow-lg);
             padding: 1rem 1.25rem;
@@ -417,6 +448,9 @@
             min-width: 300px;
             animation: slideIn .4s ease;
             border-left: 4px solid var(--success);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-left-width: 4px;
         }
         .toast-bs.error { border-left-color: var(--danger); }
         .toast-bs .toast-icon { font-size: 1.3rem; }
@@ -628,6 +662,54 @@
             white-space: nowrap;
         }
 
+        /* ───── Slider ───── */
+        .slider-wrapper {
+            position: relative;
+            margin: 0 -10px;
+        }
+        .scroll-container {
+            display: flex;
+            gap: 1.25rem;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            padding: 1rem 10px 2rem;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+        .scroll-container > * {
+            flex: 0 0 auto;
+            width: 280px;
+            scroll-snap-align: start;
+        }
+        .slider-nav {
+            display: flex;
+            gap: .5rem;
+        }
+        .nav-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: .9rem;
+        }
+        .nav-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(108,92,231,.2);
+        }
+
         /* ───── Misc ───── */
         .breadcrumb-item a { color: var(--primary); text-decoration: none; }
         .breadcrumb-item.active { color: var(--text-muted); }
@@ -678,6 +760,10 @@
                 {% if user.is_authenticated %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'order_list' %}"><i class="bi bi-receipt me-1"></i>Đơn hàng</a></li>
                 <li class="nav-item"><a class="nav-link" href="{% url 'wishlist' %}"><i class="bi bi-heart me-1"></i>Yêu thích</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'reading_dna' %}" style="color:var(--accent) !important"><i class="bi bi-fingerprint me-1"></i>Reading DNA</a></li>
+                {% endif %}
+                {% if user.is_staff %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}" style="color:var(--success) !important"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
                 {% endif %}
             </ul>
             <div class="search-wrapper me-3">
@@ -687,6 +773,11 @@
             </div>
             <ul class="navbar-nav align-items-center gap-2">
                 {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <button id="theme-toggle" class="btn btn-glass btn-sm me-2" title="Đổi giao diện">
+                        <i class="bi bi-moon-stars" id="theme-icon"></i>
+                    </button>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'profile' %}"><i class="bi bi-person-circle me-1"></i>{{ user.username }}</a>
                 </li>
@@ -699,6 +790,11 @@
                     </form>
                 </li>
                 {% else %}
+                <li class="nav-item">
+                    <button id="theme-toggle" class="btn btn-glass btn-sm me-2" title="Đổi giao diện">
+                        <i class="bi bi-moon-stars" id="theme-icon"></i>
+                    </button>
+                </li>
                 <li class="nav-item"><a href="{% url 'login' %}" class="btn btn-auth-outline btn-sm">Đăng nhập</a></li>
                 <li class="nav-item"><a href="{% url 'register' %}" class="btn btn-auth btn-sm">Đăng ký</a></li>
                 {% endif %}
@@ -772,142 +868,188 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ─── Navbar scroll effect ───
-const nav = document.getElementById('mainNav');
-window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 20);
-});
+    // ───── Theme Toggle ─────
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const htmlElement = document.documentElement;
 
-// ─── Live Search ───
-const searchInput = document.getElementById('live-search');
-const searchResults = document.getElementById('search-results');
-let searchTimeout;
-if (searchInput) {
-    searchInput.addEventListener('input', function () {
-        clearTimeout(searchTimeout);
-        const q = this.value.trim();
-        if (q.length < 2) { searchResults.classList.remove('show'); return; }
-        searchTimeout = setTimeout(() => {
-            fetch(`/api/search/?q=${encodeURIComponent(q)}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.results.length) {
-                        searchResults.innerHTML = '<div class="p-3 text-center text-muted small">Không tìm thấy kết quả</div>';
-                    } else {
-                        searchResults.innerHTML = data.results.map(b => `
-                            <a href="${b.url}" class="live-search-item">
-                                ${b.cover ? `<img src="${b.cover}" alt="">` : '<div style="width:40px;height:55px;background:#F0F2F5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">📖</div>'}
-                                <div class="info">
-                                    <div class="title">${b.title}</div>
-                                    <div class="author">${b.author}</div>
-                                </div>
-                                <div class="price">${Number(b.price).toLocaleString()}₫</div>
-                            </a>
-                        `).join('');
-                    }
-                    searchResults.classList.add('show');
-                });
-        }, 300);
-    });
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-            searchResults.classList.remove('show');
-        }
-    });
-    searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const q = searchInput.value.trim();
-            if (q) window.location.href = `/books/?q=${encodeURIComponent(q)}`;
-        }
-    });
-}
-
-// ─── AJAX Helpers ───
-function getCookie(name) {
-    let val = null;
-    document.cookie.split(';').forEach(c => {
-        c = c.trim();
-        if (c.startsWith(name + '=')) val = decodeURIComponent(c.substring(name.length + 1));
-    });
-    return val;
-}
-
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast-bs ${type === 'error' ? 'error' : ''}`;
-    toast.innerHTML = `
-        <span class="toast-icon">${type === 'error' ? '❌' : '✅'}</span>
-        <span class="toast-msg">${message}</span>
-    `;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.animation = 'slideOut .3s ease forwards';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-function updateCartBadge(count) {
-    const badge = document.getElementById('cart-badge');
-    if (badge) {
-        badge.textContent = count;
-        badge.style.display = count > 0 ? 'inline-block' : 'none';
-    }
-}
-
-// ─── AJAX Add to Cart ───
-document.addEventListener('click', function (e) {
-    const btn = e.target.closest('.ajax-add-cart');
-    if (!btn) return;
-    e.preventDefault();
-    const bookId = btn.dataset.bookId;
-    fetch(`/cart/add/${bookId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: new URLSearchParams({ quantity: 1 }),
-    })
-    .then(r => r.json())
-    .then(data => {
-        showToast(data.message, data.status === 'ok' ? 'success' : 'error');
-        if (data.cart_count !== undefined) updateCartBadge(data.cart_count);
-    })
-    .catch(() => showToast('Có lỗi xảy ra!', 'error'));
-});
-
-// ─── AJAX Wishlist ───
-document.addEventListener('click', function (e) {
-    const btn = e.target.closest('.ajax-wishlist');
-    if (!btn) return;
-    e.preventDefault();
-    const bookId = btn.dataset.bookId;
-    const action = btn.dataset.action; // 'add' or 'remove'
-    fetch(`/wishlist/${action}/${bookId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-    })
-    .then(r => r.json())
-    .then(data => {
-        showToast(data.message);
-        if (data.action === 'added') {
-            btn.dataset.action = 'remove';
-            btn.classList.add('active');
-            btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+    function updateThemeIcon(theme) {
+        if (!themeIcon) return;
+        if (theme === 'dark') {
+            themeIcon.classList.replace('bi-moon-stars', 'bi-sun');
         } else {
-            btn.dataset.action = 'add';
-            btn.classList.remove('active');
-            btn.innerHTML = '<i class="bi bi-heart"></i>';
+            themeIcon.classList.replace('bi-sun', 'bi-moon-stars');
         }
-    })
-    .catch(() => showToast('Có lỗi xảy ra!', 'error'));
-});
+    }
+
+    // Load saved theme immediately
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    window.addEventListener('DOMContentLoaded', () => updateThemeIcon(savedTheme));
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+    }
+
+    // ───── Navbar Scroll Effect ─────
+    const nav = document.getElementById('mainNav');
+    window.addEventListener('scroll', () => {
+        if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // ───── AJAX Helpers ─────
+    function getCookie(name) {
+        let val = null;
+        document.cookie.split(';').forEach(c => {
+            c = c.trim();
+            if (c.startsWith(name + '=')) val = decodeURIComponent(c.substring(name.length + 1));
+        });
+        return val;
+    }
+
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast-bs toast-${type}`;
+        toast.innerHTML = `
+            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+            <span>${message}</span>
+        `;
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-20px)';
+            setTimeout(() => toast.remove(), 400);
+        }, 3000);
+    }
+
+    function updateCartBadge(count) {
+        const badge = document.getElementById('cart-badge');
+        if (badge) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+    }
+
+    // ───── Live Search ─────
+    const searchInput = document.getElementById('live-search');
+    const searchResults = document.getElementById('search-results');
+    let searchTimeout;
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            const q = this.value.trim();
+            if (q.length < 2) { searchResults.classList.remove('show'); return; }
+            searchTimeout = setTimeout(() => {
+                fetch(`/api/search/?q=${encodeURIComponent(q)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.results.length) {
+                            searchResults.innerHTML = '<div class="p-3 text-center text-muted small">Không tìm thấy kết quả</div>';
+                        } else {
+                            searchResults.innerHTML = data.results.map(b => `
+                                <a href="${b.url}" class="live-search-item">
+                                    ${b.cover ? `<img src="${b.cover}" alt="">` : '<div style="width:40px;height:55px;background:var(--bg-body);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">📖</div>'}
+                                    <div class="info">
+                                        <div class="title">${b.title}</div>
+                                        <div class="author">${b.author}</div>
+                                    </div>
+                                    <div class="price">${Number(b.price).toLocaleString()}₫</div>
+                                </a>
+                            `).join('');
+                        }
+                        searchResults.classList.add('show');
+                    });
+            }, 300);
+        });
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.remove('show');
+            }
+        });
+    }
+
+    // ───── AJAX Handlers ─────
+    document.addEventListener('click', function (e) {
+        // Add to Cart
+        const cartBtn = e.target.closest('.ajax-add-cart');
+        if (cartBtn) {
+            e.preventDefault();
+            const bookId = cartBtn.dataset.bookId;
+            fetch(`/cart/add/${bookId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: new URLSearchParams({ quantity: 1 }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok' || data.status === 'success') {
+                    showToast(data.message || 'Đã thêm vào giỏ hàng');
+                    if (data.cart_count !== undefined) updateCartBadge(data.cart_count);
+                } else {
+                    showToast(data.message || 'Có lỗi xảy ra', 'error');
+                }
+            })
+            .catch(() => showToast('Có lỗi xảy ra!', 'error'));
+        }
+
+        // Wishlist
+        const favBtn = e.target.closest('.ajax-wishlist');
+        if (favBtn) {
+            e.preventDefault();
+            const bookId = favBtn.dataset.bookId;
+            const action = favBtn.dataset.action;
+            const url = action === 'add' ? `/wishlist/add/${bookId}/` : `/wishlist/remove/${bookId}/`;
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok' || data.status === 'success') {
+                    showToast(data.message);
+                    const isAdded = data.action === 'added' || action === 'add';
+                    if (isAdded && data.action !== 'removed') {
+                        favBtn.dataset.action = 'remove';
+                        favBtn.classList.add('active');
+                        favBtn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+                    } else {
+                        favBtn.dataset.action = 'add';
+                        favBtn.classList.remove('active');
+                        favBtn.innerHTML = '<i class="bi bi-heart"></i>';
+                    }
+                }
+            })
+            .catch(() => showToast('Có lỗi xảy ra!', 'error'));
+        }
+    });
 </script>
 {% block extra_js %}{% endblock %}
+    <script>
+        // Global Slider Helper
+        function scrollSlider(containerId, direction) {
+            const container = document.getElementById(containerId);
+            const scrollAmount = container.offsetWidth * 0.8;
+            if (direction === 'left') {
+                container.scrollLeft -= scrollAmount;
+            } else {
+                container.scrollLeft += scrollAmount;
+            }
+        }
+    </script>
 </body>
 </html>

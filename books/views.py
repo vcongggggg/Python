@@ -1,19 +1,26 @@
+import csv
 import json
+import math
 import re
-from collections import Counter
+from collections import Counter, defaultdict
+from datetime import timedelta
 
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Q, Sum
-from django.http import JsonResponse
+from django.db.models import Avg, Count, F, Q, Sum
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import CheckoutForm, ProfileEditForm, RatingForm, RegisterForm
 from .models import Book, Category, Coupon, Order, OrderItem, Rating, Wishlist
+
+User = get_user_model()
+
 
 # ═══════════════════════════════════════════════════════════════════
 # Cart helpers (session: { "cart": { "book_id": quantity } })
@@ -79,14 +86,16 @@ def _order_books_by_ids(queryset, ids):
 # ═══════════════════════════════════════════════════════════════════
 
 
-def _get_popular_books(limit: int = 8):
+def _get_popular_books(limit: int = 15):
+    """Sách bán chạy nhất dựa trên số lượng đơn hàng."""
     return (
         Book.objects.annotate(total_sold=Count("order_items"))
         .order_by("-total_sold", "title")[:limit]
     )
 
 
-def _get_top_rated_books(limit: int = 8):
+def _get_top_rated_books(limit: int = 15):
+    """Sách được đánh giá cao nhất."""
     return (
         Book.objects.annotate(avg_rating=Avg("ratings__score"), rating_count=Count("ratings"))
         .filter(rating_count__gt=0)
@@ -196,7 +205,7 @@ def _get_content_similar_books(book, limit: int = 8):
 
 def _also_bought_books(book, limit: int = 6):
     """Collaborative: users who bought this book also bought..."""
-    buyers = (
+    buyers = list(
         OrderItem.objects.filter(book=book)
         .values_list("order__user", flat=True)
         .distinct()[:100]
@@ -244,12 +253,13 @@ def _books_queryset(search=None, category_id=None, sort="title"):
 
 
 def home(request):
+    """Trang chủ: hiển thị các danh mục sách khác nhau dưới dạng Slider."""
     books = Book.objects.all().order_by("-created_at")[:12]
-    popular_books = _get_popular_books()
-    top_rated_books = _get_top_rated_books()
+    popular_books = _get_popular_books(15)
+    top_rated_books = _get_top_rated_books(15)
     recommended_books = None
     if request.user.is_authenticated:
-        recommended_books = _get_recommended_for_user(request.user)
+        recommended_books = _get_recommended_for_user(request.user, limit=12)
     recently_viewed = _recently_viewed_books(request)
     total_books = Book.objects.count()
     total_categories = Category.objects.count()
@@ -321,6 +331,19 @@ def book_detail(request, pk: int):
     )
     avg_rating = book.ratings.aggregate(avg=Avg("score"), cnt=Count("id"))
     book_ratings = book.ratings.select_related("user").order_by("-created_at")[:10]
+
+    # AI: Sentiment analysis
+    sentiment_summary = _get_book_sentiment_summary(book)
+    # Add sentiment to each rating
+    rated_with_sentiment = []
+    for r in book_ratings:
+        s, confidence = _analyze_sentiment(r.comment)
+        rated_with_sentiment.append({
+            "rating": r,
+            "sentiment": s,
+            "confidence": confidence,
+        })
+
     user_rating = None
     rating_form = None
     is_in_wishlist = False
@@ -334,7 +357,8 @@ def book_detail(request, pk: int):
         "also_bought": also_bought,
         "same_author_books": same_author_books,
         "avg_rating": avg_rating,
-        "book_ratings": book_ratings,
+        "book_ratings": rated_with_sentiment,
+        "sentiment_summary": sentiment_summary,
         "user_rating": user_rating,
         "rating_form": rating_form,
         "is_in_wishlist": is_in_wishlist,
@@ -648,3 +672,529 @@ def about(request):
 
 def contact(request):
     return render(request, "books/contact.html")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# AI: Sentiment Analysis
+# ═══════════════════════════════════════════════════════════════════
+
+# Vietnamese + English positive/negative word lists for simple sentiment
+_POSITIVE_WORDS = {
+    "hay", "tot", "tuyet", "voi", "dep", "nhanh", "uy tin", "chat luong",
+    "great", "good", "excellent", "amazing", "wonderful", "love", "best",
+    "fantastic", "perfect", "recommend", "enjoyed", "beautiful", "brilliant",
+    "masterpiece", "outstanding", "superb", "awesome", "incredible", "favorite",
+    "exciting", "engaging", "fascinating", "captivating", "delightful", "impressive",
+    "satisfying", "remarkable", "touching", "inspiring", "classic", "must-read",
+    "pleased", "happy", "entertaining", "fun", "intriguing", "profound",
+    "thich", "rat hay", "rat tot", "xuat sac", "dinh", "pro",
+    "helpful", "informative", "insightful", "compelling", "riveting",
+}
+_NEGATIVE_WORDS = {
+    "te", "chan", "kem", "do", "toi", "xau",
+    "bad", "terrible", "awful", "horrible", "boring", "waste", "poor",
+    "disappointing", "worst", "hate", "slow", "confusing", "mediocre",
+    "overrated", "predictable", "dull", "weak", "annoying", "frustrating",
+    "uninspired", "flat", "tedious", "unreadable", "pointless", "shallow",
+    "repetitive", "forgettable", "unimpressive", "bland", "meh",
+    "tham", "nham", "that vong", "khong hay", "bof",
+}
+
+
+def _analyze_sentiment(text):
+    """Simple rule-based sentiment analysis.
+    Returns: ('positive', score), ('negative', score), or ('neutral', score)
+    Score is confidence from 0.0 to 1.0.
+    """
+    if not text:
+        return "neutral", 0.5
+
+    text_lower = text.lower()
+    # Remove Vietnamese diacritics for matching
+    import unicodedata
+    text_ascii = unicodedata.normalize("NFD", text_lower)
+    text_ascii = "".join(c for c in text_ascii if unicodedata.category(c) != "Mn")
+
+    words = set(re.findall(r'\b\w+\b', text_ascii))
+    words_orig = set(re.findall(r'\b\w+\b', text_lower))
+    all_words = words | words_orig
+
+    pos_count = len(all_words & _POSITIVE_WORDS)
+    neg_count = len(all_words & _NEGATIVE_WORDS)
+
+    total = pos_count + neg_count
+    if total == 0:
+        return "neutral", 0.5
+
+    if pos_count > neg_count:
+        return "positive", min(0.5 + (pos_count - neg_count) / total * 0.5, 1.0)
+    elif neg_count > pos_count:
+        return "negative", min(0.5 + (neg_count - pos_count) / total * 0.5, 1.0)
+    return "neutral", 0.5
+
+
+def _get_book_sentiment_summary(book):
+    """Get sentiment distribution for a book's ratings."""
+    ratings = book.ratings.exclude(comment="").exclude(comment__isnull=True)
+    if not ratings.exists():
+        return None
+
+    sentiments = {"positive": 0, "negative": 0, "neutral": 0}
+    for r in ratings:
+        sentiment, _ = _analyze_sentiment(r.comment)
+        sentiments[sentiment] += 1
+
+    total = sum(sentiments.values())
+    return {
+        "positive": sentiments["positive"],
+        "negative": sentiments["negative"],
+        "neutral": sentiments["neutral"],
+        "total": total,
+        "positive_pct": round(sentiments["positive"] / total * 100) if total else 0,
+        "negative_pct": round(sentiments["negative"] / total * 100) if total else 0,
+        "neutral_pct": round(sentiments["neutral"] / total * 100) if total else 0,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# AI: User Reading DNA / Taste Profile
+# ═══════════════════════════════════════════════════════════════════
+
+
+def _get_user_reading_dna(user):
+    """Analyze user's reading preferences and build a 'Reading DNA' profile."""
+    orders = OrderItem.objects.filter(order__user=user).select_related("book__category")
+    ratings = Rating.objects.filter(user=user).select_related("book__category")
+
+    if not orders.exists() and not ratings.exists():
+        return None
+
+    dna = {}
+
+    # Category preferences
+    cat_counter = Counter()
+    for item in orders:
+        if item.book.category:
+            cat_counter[item.book.category.name] += item.quantity
+    for r in ratings:
+        if r.book.category and r.score >= 4:
+            cat_counter[r.book.category.name] += r.score - 2  # weight by score
+
+    if cat_counter:
+        total_cat = sum(cat_counter.values())
+        dna["categories"] = [
+            {"name": name, "count": count, "pct": round(count / total_cat * 100)}
+            for name, count in cat_counter.most_common(6)
+        ]
+    else:
+        dna["categories"] = []
+
+    # Favorite authors
+    author_counter = Counter()
+    for item in orders:
+        author_counter[item.book.author] += item.quantity
+    for r in ratings:
+        if r.score >= 4:
+            author_counter[r.book.author] += 1
+    dna["favorite_authors"] = [
+        {"name": name, "count": count}
+        for name, count in author_counter.most_common(5)
+    ]
+
+    # Price range preference
+    prices = [float(item.book.price) for item in orders]
+    if prices:
+        dna["price_range"] = {
+            "min": min(prices),
+            "max": max(prices),
+            "avg": round(sum(prices) / len(prices)),
+        }
+    else:
+        dna["price_range"] = None
+
+    # Average rating given
+    avg_score = ratings.aggregate(avg=Avg("score"))["avg"]
+    dna["avg_rating_given"] = round(avg_score, 1) if avg_score else None
+
+    # Total books, total spent
+    dna["total_books_bought"] = sum(item.quantity for item in orders)
+    dna["total_spent"] = sum(float(item.price) * item.quantity for item in orders)
+    dna["total_ratings"] = ratings.count()
+
+    # Reading mood (based on category distribution)
+    if dna["categories"]:
+        top_cat = dna["categories"][0]["name"].lower()
+        mood_map = {
+            "fiction": "Dreamer",
+            "mystery": "Detective",
+            "romance": "Romantic",
+            "science": "Explorer",
+            "programming": "Builder",
+            "history": "Historian",
+            "fantasy": "Adventurer",
+            "thriller": "Thrill-Seeker",
+        }
+        dna["reading_mood"] = "Bookworm"
+        for key, mood in mood_map.items():
+            if key in top_cat:
+                dna["reading_mood"] = mood
+                break
+    else:
+        dna["reading_mood"] = "Newcomer"
+
+    return dna
+
+
+# ═══════════════════════════════════════════════════════════════════
+# AI: Explainable Recommendations
+# ═══════════════════════════════════════════════════════════════════
+
+
+def _get_explainable_recommendations(user, limit=8):
+    """Get recommended books WITH explanations for WHY each is recommended."""
+    recommendations = []
+
+    user_orders = OrderItem.objects.filter(order__user=user).select_related("book__category")
+    user_ratings = Rating.objects.filter(user=user).select_related("book__category")
+
+    bought_ids = set(user_orders.values_list("book_id", flat=True))
+    rated_ids = set(user_ratings.values_list("book_id", flat=True))
+    exclude_ids = bought_ids | rated_ids
+
+    # 1. "Because you liked [Category]"
+    liked_categories = {}
+    for r in user_ratings.filter(score__gte=4):
+        if r.book.category:
+            liked_categories[r.book.category_id] = r.book.category.name
+    for cat_id, cat_name in list(liked_categories.items())[:3]:
+        books = (
+            Book.objects.filter(category_id=cat_id)
+            .exclude(pk__in=exclude_ids)
+            .annotate(avg_r=Avg("ratings__score"))
+            .order_by("-avg_r", "title")[:2]
+        )
+        for b in books:
+            recommendations.append({
+                "book": b,
+                "reason": f"Ban thich the loai {cat_name}",
+                "reason_type": "category",
+                "reason_icon": "bi-tag",
+            })
+            exclude_ids.add(b.pk)
+
+    # 2. "Because you bought books by [Author]"
+    author_counter = Counter(item.book.author for item in user_orders)
+    for author, _ in author_counter.most_common(3):
+        books = (
+            Book.objects.filter(author=author)
+            .exclude(pk__in=exclude_ids)
+            .order_by("-created_at")[:1]
+        )
+        for b in books:
+            recommendations.append({
+                "book": b,
+                "reason": f"Ban da mua sach cua {author}",
+                "reason_type": "author",
+                "reason_icon": "bi-person-heart",
+            })
+            exclude_ids.add(b.pk)
+
+    # 3. "Users with similar taste also bought"
+    if bought_ids:
+        similar_users = (
+            OrderItem.objects.filter(book_id__in=bought_ids)
+            .exclude(order__user=user)
+            .values_list("order__user", flat=True)
+            .distinct()[:30]
+        )
+        collaborative = (
+            Book.objects.filter(order_items__order__user__in=similar_users)
+            .exclude(pk__in=exclude_ids)
+            .annotate(buy_count=Count("order_items"))
+            .order_by("-buy_count")
+            .distinct()[:3]
+        )
+        for b in collaborative:
+            recommendations.append({
+                "book": b,
+                "reason": "Nguoi dung co so thich tuong tu da mua",
+                "reason_type": "collaborative",
+                "reason_icon": "bi-people",
+            })
+            exclude_ids.add(b.pk)
+
+    # 4. "Trending in your favorite categories"
+    if liked_categories:
+        last_30_days = timezone.now() - timedelta(days=30)
+        trending = (
+            Book.objects.filter(
+                category_id__in=liked_categories.keys(),
+                order_items__order__created_at__gte=last_30_days,
+            )
+            .exclude(pk__in=exclude_ids)
+            .annotate(recent_sales=Count("order_items"))
+            .order_by("-recent_sales")
+            .distinct()[:2]
+        )
+        for b in trending:
+            recommendations.append({
+                "book": b,
+                "reason": "Dang hot trong the loai ban yeu thich",
+                "reason_type": "trending",
+                "reason_icon": "bi-fire",
+            })
+
+    return recommendations[:limit]
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Admin Dashboard
+# ═══════════════════════════════════════════════════════════════════
+
+
+@staff_member_required
+def dashboard(request):
+    now = timezone.now()
+
+    # Overall stats
+    total_revenue = OrderItem.objects.aggregate(
+        total=Sum(F("price") * F("quantity"))
+    )["total"] or 0
+    total_orders = Order.objects.count()
+    total_users = User.objects.count()
+    total_books = Book.objects.count()
+
+    # Revenue by month (last 12 months)
+    months_data = []
+    for i in range(11, -1, -1):
+        month_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1, hour=0, minute=0, second=0)
+        if i > 0:
+            month_end = (month_start + timedelta(days=32)).replace(day=1)
+        else:
+            month_end = now
+        revenue = OrderItem.objects.filter(
+            order__created_at__gte=month_start,
+            order__created_at__lt=month_end,
+        ).aggregate(total=Sum(F("price") * F("quantity")))["total"] or 0
+        months_data.append({
+            "label": month_start.strftime("%m/%Y"),
+            "revenue": float(revenue),
+        })
+
+    # Top selling books
+    top_books = (
+        Book.objects.annotate(total_sold=Count("order_items"))
+        .filter(total_sold__gt=0)
+        .order_by("-total_sold")[:10]
+    )
+
+    # Category distribution
+    cat_dist = (
+        Category.objects.annotate(book_count=Count("books"))
+        .filter(book_count__gt=0)
+        .order_by("-book_count")[:8]
+    )
+
+    # Order status distribution
+    status_dist = (
+        Order.objects.values("status")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+
+    # Recent orders
+    recent_orders = Order.objects.select_related("user").prefetch_related("items").order_by("-created_at")[:10]
+
+    # Rating distribution
+    rating_dist = (
+        Rating.objects.values("score")
+        .annotate(count=Count("id"))
+        .order_by("score")
+    )
+
+    # Low stock books
+    low_stock = Book.objects.filter(stock__lte=10).order_by("stock")[:10]
+
+    context = {
+        "total_revenue": total_revenue,
+        "total_orders": total_orders,
+        "total_users": total_users,
+        "total_books": total_books,
+        "months_data_json": json.dumps(months_data),
+        "top_books": top_books,
+        "cat_dist": cat_dist,
+        "status_dist": status_dist,
+        "recent_orders": recent_orders,
+        "rating_dist": rating_dist,
+        "low_stock": low_stock,
+    }
+    return render(request, "books/dashboard.html", context)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Export CSV
+# ═══════════════════════════════════════════════════════════════════
+
+
+@staff_member_required
+def export_orders_csv(request):
+    response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+    response["Content-Disposition"] = 'attachment; filename="orders.csv"'
+    response.write("\ufeff")  # BOM for Excel
+    writer = csv.writer(response)
+    writer.writerow(["Ma don", "Khach hang", "Trang thai", "Tong tien", "Giam gia", "Thanh toan", "Ngay dat", "Dia chi"])
+    for order in Order.objects.select_related("user").order_by("-created_at"):
+        writer.writerow([
+            order.pk,
+            order.user.username,
+            order.status_display_vi,
+            float(order.subtotal),
+            float(order.discount_amount),
+            float(order.total),
+            order.created_at.strftime("%Y-%m-%d %H:%M"),
+            order.shipping_address or "",
+        ])
+    return response
+
+
+@staff_member_required
+def export_books_csv(request):
+    response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
+    response["Content-Disposition"] = 'attachment; filename="books.csv"'
+    response.write("\ufeff")
+    writer = csv.writer(response)
+    writer.writerow(["ID", "Ten sach", "Tac gia", "The loai", "Gia", "Ton kho", "Nam XB", "Mo ta"])
+    for book in Book.objects.select_related("category").order_by("title"):
+        writer.writerow([
+            book.pk,
+            book.title,
+            book.author,
+            book.category.name if book.category else "",
+            float(book.price),
+            book.stock,
+            book.published_year or "",
+            (book.description or "")[:200],
+        ])
+    return response
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Cancel Order
+# ═══════════════════════════════════════════════════════════════════
+
+
+@login_required
+@require_POST
+def cancel_order(request, pk: int):
+    order = get_object_or_404(Order, pk=pk, user=request.user)
+    if order.status in ("pending", "confirmed"):
+        order.status = "cancelled"
+        order.save(update_fields=["status"])
+        # Restore stock
+        for item in order.items.all():
+            item.book.stock += item.quantity
+            item.book.save(update_fields=["stock"])
+        # Restore coupon usage
+        if order.coupon:
+            order.coupon.used_count = max(0, order.coupon.used_count - 1)
+            order.coupon.save(update_fields=["used_count"])
+        messages.success(request, f"Da huy don hang #{order.pk}.")
+    else:
+        messages.error(request, "Khong the huy don hang o trang thai nay.")
+    return redirect("order_detail", pk=order.pk)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# REST API
+# ═══════════════════════════════════════════════════════════════════
+
+
+def api_books(request):
+    """REST API: list books with pagination, search, filter."""
+    page_num = request.GET.get("page", 1)
+    per_page = min(int(request.GET.get("per_page", 20)), 50)
+    search = request.GET.get("q", "").strip()
+    category = request.GET.get("category")
+    sort = request.GET.get("sort", "title")
+
+    qs = _books_queryset(search=search or None, category_id=category, sort=sort)
+    paginator = Paginator(qs, per_page)
+    page = paginator.get_page(page_num)
+
+    books_data = [
+        {
+            "id": b.pk,
+            "title": b.title,
+            "author": b.author,
+            "price": float(b.price),
+            "category": b.category.name if b.category else None,
+            "published_year": b.published_year,
+            "stock": b.stock,
+            "in_stock": b.in_stock,
+            "cover_image": b.cover_image or None,
+            "description": (b.description or "")[:300],
+            "url": f"/books/{b.pk}/",
+        }
+        for b in page.object_list
+    ]
+    return JsonResponse({
+        "count": paginator.count,
+        "num_pages": paginator.num_pages,
+        "current_page": page.number,
+        "results": books_data,
+    })
+
+
+def api_book_detail(request, pk: int):
+    """REST API: single book detail."""
+    book = get_object_or_404(Book, pk=pk)
+    avg_rating = book.ratings.aggregate(avg=Avg("score"), cnt=Count("id"))
+    sentiment = _get_book_sentiment_summary(book)
+    return JsonResponse({
+        "id": book.pk,
+        "title": book.title,
+        "author": book.author,
+        "price": float(book.price),
+        "description": book.description or "",
+        "category": book.category.name if book.category else None,
+        "published_year": book.published_year,
+        "num_pages": book.num_pages,
+        "stock": book.stock,
+        "in_stock": book.in_stock,
+        "cover_image": book.cover_image or None,
+        "avg_rating": round(avg_rating["avg"], 1) if avg_rating["avg"] else None,
+        "rating_count": avg_rating["cnt"],
+        "sentiment": sentiment,
+    })
+
+
+def api_stats(request):
+    """REST API: public stats."""
+    total_books = Book.objects.count()
+    total_categories = Category.objects.count()
+    total_ratings = Rating.objects.count()
+    avg_rating = Rating.objects.aggregate(avg=Avg("score"))["avg"]
+    return JsonResponse({
+        "total_books": total_books,
+        "total_categories": total_categories,
+        "total_ratings": total_ratings,
+        "avg_rating": round(avg_rating, 2) if avg_rating else None,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Enhanced Profile with Reading DNA
+# ═══════════════════════════════════════════════════════════════════
+
+
+@login_required
+def reading_dna(request):
+    """User's Reading DNA page — AI-analyzed reading preferences."""
+    dna = _get_user_reading_dna(request.user)
+    recommendations = _get_explainable_recommendations(request.user)
+    context = {
+        "dna": dna,
+        "recommendations": recommendations,
+    }
+    return render(request, "books/reading_dna.html", context)
+

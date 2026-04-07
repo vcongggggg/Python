@@ -16,13 +16,23 @@ urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
     path("orders/", views.order_list, name="order_list"),
     path("orders/<int:pk>/", views.order_detail, name="order_detail"),
+    path("orders/<int:pk>/cancel/", views.cancel_order, name="cancel_order"),
     path("rate/<int:book_id>/", views.rate_book, name="rate_book"),
     path("wishlist/", views.wishlist_view, name="wishlist"),
     path("wishlist/add/<int:book_id>/", views.wishlist_add, name="wishlist_add"),
     path("wishlist/remove/<int:book_id>/", views.wishlist_remove, name="wishlist_remove"),
     path("profile/", views.profile, name="profile"),
     path("profile/edit/", views.profile_edit, name="profile_edit"),
+    path("profile/reading-dna/", views.reading_dna, name="reading_dna"),
     path("about/", views.about, name="about"),
     path("contact/", views.contact, name="contact"),
+    # Admin dashboard
+    path("dashboard/", views.dashboard, name="dashboard"),
+    path("dashboard/export/orders/", views.export_orders_csv, name="export_orders_csv"),
+    path("dashboard/export/books/", views.export_books_csv, name="export_books_csv"),
+    # REST API
     path("api/search/", views.api_search, name="api_search"),
+    path("api/v1/books/", views.api_books, name="api_books"),
+    path("api/v1/books/<int:pk>/", views.api_book_detail, name="api_book_detail"),
+    path("api/v1/stats/", views.api_stats, name="api_stats"),
 ]

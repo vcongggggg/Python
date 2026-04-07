@@ -57,6 +57,18 @@
                 </div>
             </div>
         </div>
+        <div class="white-panel mb-3 fade-up" style="border: 2px solid rgba(108,92,231,.12)">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:48px;height:48px;border-radius:12px;background:var(--gradient-1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem">
+                    <i class="bi bi-fingerprint"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="fw-bold mb-0">Reading DNA</h6>
+                    <small style="color:var(--text-muted)">Phân tích sở thích đọc sách bằng AI</small>
+                </div>
+                <a href="{% url 'reading_dna' %}" class="btn btn-gradient btn-gradient-sm">Xem phân tích</a>
+            </div>
+        </div>
         <div class="d-flex gap-2 mt-3 fade-up">
             <a href="{% url 'order_list' %}" class="btn btn-glass"><i class="bi bi-receipt me-1"></i>Đơn hàng</a>
             <a href="{% url 'wishlist' %}" class="btn btn-glass"><i class="bi bi-heart me-1"></i>Yêu thích</a>

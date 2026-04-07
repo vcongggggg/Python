@@ -116,31 +116,74 @@
 </div>
 {% endif %}
 
+<!-- Sentiment Analysis -->
+{% if sentiment_summary %}
+<div class="white-panel mb-4 fade-up">
+    <div class="section-title mb-3">
+        <span class="icon icon-green"><i class="bi bi-emoji-smile"></i></span>
+        Phan tich cam xuc AI
+    </div>
+    <div class="row g-3">
+        <div class="col-md-4 text-center">
+            <div style="font-size:2rem;font-weight:800;color:var(--success)">{{ sentiment_summary.positive_pct }}%</div>
+            <div style="font-size:.85rem;color:var(--text-muted)">Tich cuc</div>
+            <div style="height:6px;background:var(--bg-body);border-radius:10px;margin-top:6px;overflow:hidden">
+                <div style="width:{{ sentiment_summary.positive_pct }}%;height:100%;background:var(--success);border-radius:10px"></div>
+            </div>
+        </div>
+        <div class="col-md-4 text-center">
+            <div style="font-size:2rem;font-weight:800;color:var(--accent2)">{{ sentiment_summary.neutral_pct }}%</div>
+            <div style="font-size:.85rem;color:var(--text-muted)">Trung lap</div>
+            <div style="height:6px;background:var(--bg-body);border-radius:10px;margin-top:6px;overflow:hidden">
+                <div style="width:{{ sentiment_summary.neutral_pct }}%;height:100%;background:var(--accent2);border-radius:10px"></div>
+            </div>
+        </div>
+        <div class="col-md-4 text-center">
+            <div style="font-size:2rem;font-weight:800;color:var(--danger)">{{ sentiment_summary.negative_pct }}%</div>
+            <div style="font-size:.85rem;color:var(--text-muted)">Tieu cuc</div>
+            <div style="height:6px;background:var(--bg-body);border-radius:10px;margin-top:6px;overflow:hidden">
+                <div style="width:{{ sentiment_summary.negative_pct }}%;height:100%;background:var(--danger);border-radius:10px"></div>
+            </div>
+        </div>
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);text-align:center;margin-top:12px">Dua tren {{ sentiment_summary.total }} danh gia co nhan xet</p>
+</div>
+{% endif %}
+
 <!-- Readers ratings -->
 {% if book_ratings %}
 <div class="white-panel mb-4 fade-up">
     <div class="section-title mb-3">
         <span class="icon icon-purple"><i class="bi bi-chat-dots"></i></span>
-        Đánh giá từ độc giả
+        Danh gia tu doc gia
     </div>
-    {% for r in book_ratings %}
+    {% for entry in book_ratings %}
     <div class="d-flex gap-3 p-3 mb-2" style="background:var(--bg-body);border-radius:var(--radius-sm)">
         <div class="flex-shrink-0">
             <div style="width:42px;height:42px;border-radius:50%;background:var(--gradient-1);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.9rem">
-                {{ r.user.username|first|upper }}
+                {{ entry.rating.user.username|first|upper }}
             </div>
         </div>
         <div class="flex-grow-1">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <strong style="font-size:.9rem">{{ r.user.username }}</strong>
-                <small style="color:var(--text-muted)">{{ r.created_at|date:"d/m/Y H:i" }}</small>
+                <strong style="font-size:.9rem">{{ entry.rating.user.username }}</strong>
+                <div class="d-flex align-items-center gap-2">
+                    {% if entry.sentiment == "positive" %}
+                    <span style="font-size:.75rem;padding:2px 8px;border-radius:20px;background:rgba(0,184,148,.1);color:var(--success)"><i class="bi bi-emoji-smile me-1"></i>Tich cuc</span>
+                    {% elif entry.sentiment == "negative" %}
+                    <span style="font-size:.75rem;padding:2px 8px;border-radius:20px;background:rgba(225,112,85,.1);color:var(--danger)"><i class="bi bi-emoji-frown me-1"></i>Tieu cuc</span>
+                    {% else %}
+                    <span style="font-size:.75rem;padding:2px 8px;border-radius:20px;background:rgba(253,203,110,.15);color:#E17055"><i class="bi bi-emoji-neutral me-1"></i>Trung lap</span>
+                    {% endif %}
+                    <small style="color:var(--text-muted)">{{ entry.rating.created_at|date:"d/m/Y H:i" }}</small>
+                </div>
             </div>
             <div class="stars mb-1">
                 {% for i in "12345" %}
-                    {% if forloop.counter <= r.score %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
+                    {% if forloop.counter <= entry.rating.score %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
                 {% endfor %}
             </div>
-            {% if r.comment %}<p class="mb-0" style="color:var(--text-secondary);font-size:.9rem">{{ r.comment }}</p>{% endif %}
+            {% if entry.rating.comment %}<p class="mb-0" style="color:var(--text-secondary);font-size:.9rem">{{ entry.rating.comment }}</p>{% endif %}
         </div>
     </div>
     {% endfor %}

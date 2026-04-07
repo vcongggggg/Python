@@ -30,14 +30,19 @@
 
 <!-- Newest Books -->
 <div class="section-title fade-up">
-    <span class="icon icon-purple"><i class="bi bi-stars"></i></span>
-    Sách mới thêm
-    <span class="line"></span>
+    <div class="d-flex align-items-center gap-2 flex-grow-1">
+        <span class="icon icon-purple"><i class="bi bi-stars"></i></span>
+        <span>Sách mới thêm</span>
+    </div>
+    <div class="slider-nav me-3">
+        <button class="nav-btn" onclick="scrollSlider('newestSlider', 'left')"><i class="bi bi-chevron-left"></i></button>
+        <button class="nav-btn" onclick="scrollSlider('newestSlider', 'right')"><i class="bi bi-chevron-right"></i></button>
+    </div>
     <a href="{% url 'book_list' %}?sort=newest" class="btn btn-glass btn-sm">Xem tất cả <i class="bi bi-arrow-right"></i></a>
 </div>
-<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
-    {% for book in books %}
-    <div class="col fade-up">
+<div class="slider-wrapper mb-5">
+    <div class="scroll-container" id="newestSlider">
+        {% for book in books %}
         <div class="card card-book h-100">
             {% if not book.in_stock %}<span class="stock-badge stock-out">Hết hàng</span>{% endif %}
             <div class="img-wrapper">
@@ -50,8 +55,8 @@
                 </a>
             </div>
             <div class="card-body">
-                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
-                <p class="author mb-1">{{ book.author }}</p>
+                <h5 class="card-title text-truncate"><a href="{% url 'book_detail' book.pk %}">{{ book.title }}</a></h5>
+                <p class="author mb-1 text-truncate">{{ book.author }}</p>
                 <div class="d-flex align-items-center justify-content-between">
                     <span class="price">{{ book.price|floatformat:0 }}₫</span>
                     <div class="d-flex gap-1">
@@ -67,28 +72,27 @@
                 </div>
             </div>
         </div>
+        {% empty %}
+        <div class="w-100"><div class="empty-state"><span class="empty-icon">📚</span><p class="mb-0">Chưa có sách nào.</p></div></div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="empty-state">
-            <span class="empty-icon">📚</span>
-            <p class="mb-0">Chưa có sách nào. Chạy <code>python manage.py seed_books</code> để thêm dữ liệu mẫu.</p>
-        </div>
-    </div>
-    {% endfor %}
 </div>
 
-<!-- Recently Viewed -->
 {% if recently_viewed %}
-<div class="section-title fade-up">
-    <span class="icon icon-green"><i class="bi bi-clock-history"></i></span>
-    Đã xem gần đây
-    <span class="line"></span>
+<div class="section-title fade-up mt-5">
+    <div class="d-flex align-items-center gap-2 flex-grow-1">
+        <span class="icon icon-green"><i class="bi bi-clock-history"></i></span>
+        <span>Đã xem gần đây</span>
+    </div>
+    <div class="slider-nav me-3">
+        <button class="nav-btn" onclick="scrollSlider('recentSlider', 'left')"><i class="bi bi-chevron-left"></i></button>
+        <button class="nav-btn" onclick="scrollSlider('recentSlider', 'right')"><i class="bi bi-chevron-right"></i></button>
+    </div>
 </div>
-<div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-5">
-    {% for book in recently_viewed %}
-    <div class="col fade-up">
-        <div class="card card-book h-100">
+<div class="slider-wrapper mb-5">
+    <div class="scroll-container" id="recentSlider">
+        {% for book in recently_viewed %}
+        <div class="card card-book h-100" style="width:220px">
             <div class="img-wrapper">
                 <a href="{% url 'book_detail' book.pk %}">
                     {% if book.cover_image %}
@@ -99,25 +103,30 @@
                 </a>
             </div>
             <div class="card-body py-2 px-3">
-                <h6 class="card-title" style="font-size:.85rem"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:6 }}</a></h6>
-                <p class="author small mb-0">{{ book.author }}</p>
+                <h6 class="card-title text-truncate" style="font-size:.85rem"><a href="{% url 'book_detail' book.pk %}">{{ book.title }}</a></h6>
+                <p class="author small mb-0 text-truncate">{{ book.author }}</p>
             </div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>
 {% endif %}
 
 <!-- Popular Books -->
-<div class="section-title fade-up">
-    <span class="icon icon-pink"><i class="bi bi-fire"></i></span>
-    Sách bán chạy
-    <span class="line"></span>
+<div class="section-title fade-up mt-5">
+    <div class="d-flex align-items-center gap-2 flex-grow-1">
+        <span class="icon icon-pink"><i class="bi bi-fire"></i></span>
+        <span>Sách bán chạy nhất</span>
+    </div>
+    <div class="slider-nav me-3">
+        <button class="nav-btn" onclick="scrollSlider('popularSlider', 'left')"><i class="bi bi-chevron-left"></i></button>
+        <button class="nav-btn" onclick="scrollSlider('popularSlider', 'right')"><i class="bi bi-chevron-right"></i></button>
+    </div>
     <a href="{% url 'book_list' %}?sort=popular" class="btn btn-glass btn-sm">Xem tất cả <i class="bi bi-arrow-right"></i></a>
 </div>
-<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
-    {% for book in popular_books %}
-    <div class="col fade-up">
+<div class="slider-wrapper mb-5">
+    <div class="scroll-container" id="popularSlider">
+        {% for book in popular_books %}
         <div class="card card-book h-100">
             <div class="img-wrapper">
                 <a href="{% url 'book_detail' book.pk %}">
@@ -129,30 +138,35 @@
                 </a>
             </div>
             <div class="card-body">
-                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
-                <p class="author mb-1">{{ book.author }}</p>
+                <h5 class="card-title text-truncate"><a href="{% url 'book_detail' book.pk %}">{{ book.title }}</a></h5>
+                <p class="author mb-1 text-truncate">{{ book.author }}</p>
                 <div class="d-flex align-items-center justify-content-between">
                     <span class="price">{{ book.price|floatformat:0 }}₫</span>
                     <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ book.pk }}"><i class="bi bi-bag-plus"></i></button>
                 </div>
             </div>
         </div>
+        {% empty %}
+        <div class="w-100"><div class="empty-state"><span class="empty-icon">🔥</span><p class="mb-0">Chưa có dữ liệu bán chạy.</p></div></div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <div class="col-12"><div class="empty-state"><span class="empty-icon">🔥</span><p class="mb-0">Chưa có dữ liệu bán chạy.</p></div></div>
-    {% endfor %}
 </div>
 
 <!-- Top Rated -->
-<div class="section-title fade-up">
-    <span class="icon icon-yellow"><i class="bi bi-star-fill"></i></span>
-    Sách được đánh giá cao
-    <span class="line"></span>
+<div class="section-title fade-up mt-5">
+    <div class="d-flex align-items-center gap-2 flex-grow-1">
+        <span class="icon icon-yellow"><i class="bi bi-star-fill"></i></span>
+        <span>Sách được đánh giá cao</span>
+    </div>
+    <div class="slider-nav me-3">
+        <button class="nav-btn" onclick="scrollSlider('ratedSlider', 'left')"><i class="bi bi-chevron-left"></i></button>
+        <button class="nav-btn" onclick="scrollSlider('ratedSlider', 'right')"><i class="bi bi-chevron-right"></i></button>
+    </div>
     <a href="{% url 'book_list' %}?sort=top_rated" class="btn btn-glass btn-sm">Xem tất cả <i class="bi bi-arrow-right"></i></a>
 </div>
-<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
-    {% for book in top_rated_books %}
-    <div class="col fade-up">
+<div class="slider-wrapper mb-5">
+    <div class="scroll-container" id="ratedSlider">
+        {% for book in top_rated_books %}
         <div class="card card-book h-100">
             <div class="img-wrapper">
                 <a href="{% url 'book_detail' book.pk %}">
@@ -164,27 +178,32 @@
                 </a>
             </div>
             <div class="card-body">
-                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
-                <p class="author mb-0">{{ book.author }}</p>
+                <h5 class="card-title text-truncate"><a href="{% url 'book_detail' book.pk %}">{{ book.title }}</a></h5>
+                <p class="author mb-0 text-truncate">{{ book.author }}</p>
             </div>
         </div>
+        {% empty %}
+        <div class="w-100"><div class="empty-state"><span class="empty-icon">⭐</span><p class="mb-0">Chưa có dữ liệu đánh giá.</p></div></div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <div class="col-12"><div class="empty-state"><span class="empty-icon">⭐</span><p class="mb-0">Chưa có dữ liệu đánh giá.</p></div></div>
-    {% endfor %}
 </div>
 
 <!-- Recommended for user -->
 {% if recommended_books %}
-<div class="section-title fade-up">
-    <span class="icon icon-purple"><i class="bi bi-magic"></i></span>
-    <span>AI gợi ý cho bạn</span>
-    <span class="line"></span>
+<div class="section-title fade-up mt-5">
+    <div class="d-flex align-items-center gap-2 flex-grow-1">
+        <span class="icon icon-purple"><i class="bi bi-magic"></i></span>
+        <span>AI gợi ý riêng cho bạn</span>
+    </div>
+    <div class="slider-nav">
+        <button class="nav-btn" onclick="scrollSlider('aiSlider', 'left')"><i class="bi bi-chevron-left"></i></button>
+        <button class="nav-btn" onclick="scrollSlider('aiSlider', 'right')"><i class="bi bi-chevron-right"></i></button>
+    </div>
 </div>
-<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
-    {% for book in recommended_books %}
-    <div class="col fade-up">
-        <div class="card card-book h-100" style="border:2px solid rgba(108,92,231,.12)">
+<div class="slider-wrapper mb-5">
+    <div class="scroll-container" id="aiSlider">
+        {% for book in recommended_books %}
+        <div class="card card-book h-100" style="border:2px solid rgba(108,92,231,.15)">
             <div class="img-wrapper">
                 <a href="{% url 'book_detail' book.pk %}">
                     {% if book.cover_image %}
@@ -195,16 +214,16 @@
                 </a>
             </div>
             <div class="card-body">
-                <h5 class="card-title"><a href="{% url 'book_detail' book.pk %}">{{ book.title|truncatewords:8 }}</a></h5>
-                <p class="author mb-1">{{ book.author }}</p>
+                <h5 class="card-title text-truncate"><a href="{% url 'book_detail' book.pk %}">{{ book.title }}</a></h5>
+                <p class="author mb-1 text-truncate">{{ book.author }}</p>
                 <div class="d-flex align-items-center justify-content-between">
                     <span class="price">{{ book.price|floatformat:0 }}₫</span>
                     <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ book.pk }}"><i class="bi bi-bag-plus"></i></button>
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>
 {% endif %}
 {% endblock %}
