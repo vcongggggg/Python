@@ -14,8 +14,10 @@ from django.db.models import Avg, Count, F, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from .chatbot import BookieChatbot
 from .forms import CheckoutForm, ProfileEditForm, RatingForm, RegisterForm
 from .models import Book, Category, Coupon, Order, OrderItem, Rating, Wishlist
 
@@ -259,7 +261,7 @@ def home(request):
     top_rated_books = _get_top_rated_books(15)
     recommended_books = None
     if request.user.is_authenticated:
-        recommended_books = _get_recommended_for_user(request.user, limit=12)
+        recommended_books = _get_explainable_recommendations(request.user, limit=12)
     recently_viewed = _recently_viewed_books(request)
     total_books = Book.objects.count()
     total_categories = Category.objects.count()
@@ -1198,3 +1200,22 @@ def reading_dna(request):
     }
     return render(request, "books/reading_dna.html", context)
 
+@csrf_exempt
+def api_chatbot(request):
+    """API for Bookie Chatbot."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        user_message = data.get("message", "").strip()
+        
+        if not user_message:
+            return JsonResponse({"error": "No message provided"}, status=400)
+            
+        bot = BookieChatbot(user=request.user)
+        response = bot.get_response(user_message)
+        
+        return JsonResponse(response)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
