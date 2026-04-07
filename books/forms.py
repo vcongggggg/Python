@@ -8,16 +8,19 @@ User = get_user_model()
 
 
 class RegisterForm(UserCreationForm):
-    email = forms.EmailField(required=False, widget=forms.EmailInput(attrs={"class": "form-control"}))
+    email = forms.EmailField(required=False, widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "Email"}))
 
     class Meta:
         model = User
         fields = ("username", "email", "password1", "password2")
         widgets = {
-            "username": forms.TextInput(attrs={"class": "form-control"}),
-            "password1": forms.PasswordInput(attrs={"class": "form-control"}),
-            "password2": forms.PasswordInput(attrs={"class": "form-control"}),
+            "username": forms.TextInput(attrs={"class": "form-control", "placeholder": "Tên đăng nhập"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["password1"].widget.attrs.update({"class": "form-control", "placeholder": "Mật khẩu"})
+        self.fields["password2"].widget.attrs.update({"class": "form-control", "placeholder": "Xác nhận mật khẩu"})
 
 
 class RatingForm(forms.ModelForm):
@@ -25,8 +28,8 @@ class RatingForm(forms.ModelForm):
         model = Rating
         fields = ("score", "comment")
         widgets = {
-            "score": forms.Select(choices=[(i, f"{i} sao") for i in range(1, 6)], attrs={"class": "form-select"}),
-            "comment": forms.Textarea(attrs={"rows": 3, "placeholder": "Nhận xét (tùy chọn)...", "class": "form-control"}),
+            "score": forms.HiddenInput(attrs={"id": "rating-score-input"}),
+            "comment": forms.Textarea(attrs={"rows": 3, "placeholder": "Chia sẻ cảm nhận của bạn về cuốn sách...", "class": "form-control"}),
         }
 
 
@@ -35,7 +38,25 @@ class ProfileEditForm(forms.ModelForm):
         model = User
         fields = ("first_name", "last_name", "email")
         widgets = {
-            "first_name": forms.TextInput(attrs={"class": "form-control"}),
-            "last_name": forms.TextInput(attrs={"class": "form-control"}),
-            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "first_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Tên"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Họ"}),
+            "email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "Email"}),
         }
+
+
+class CheckoutForm(forms.Form):
+    shipping_address = forms.CharField(
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Nhập địa chỉ giao hàng..."}),
+        label="Địa chỉ giao hàng",
+        required=True,
+    )
+    note = forms.CharField(
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 2, "placeholder": "Ghi chú cho đơn hàng (tùy chọn)..."}),
+        label="Ghi chú",
+        required=False,
+    )
+    coupon_code = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Nhập mã giảm giá (nếu có)"}),
+        label="Mã giảm giá",
+        required=False,
+    )

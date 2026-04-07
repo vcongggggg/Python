@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Thanh toán - Smart Bookstore{% endblock %}
+{% block content %}
+<h1 class="fw-bold mb-4" style="font-size:1.75rem">
+    <i class="bi bi-credit-card me-2" style="color:var(--primary)"></i>Thanh toán
+</h1>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form method="post" id="checkout-form">
+            {% csrf_token %}
+            <div class="white-panel mb-3 fade-up">
+                <h5 class="fw-bold mb-3"><i class="bi bi-geo-alt me-2" style="color:var(--accent)"></i>Thông tin giao hàng</h5>
+                <div class="mb-3">
+                    <label class="form-label fw-600">{{ form.shipping_address.label }}</label>
+                    {{ form.shipping_address }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-600">{{ form.note.label }}</label>
+                    {{ form.note }}
+                </div>
+            </div>
+            <div class="white-panel mb-3 fade-up">
+                <h5 class="fw-bold mb-3"><i class="bi bi-ticket-perforated me-2" style="color:var(--success)"></i>Mã giảm giá</h5>
+                <div class="d-flex gap-2">
+                    {{ form.coupon_code }}
+                    <button type="submit" class="btn btn-gradient btn-gradient-success flex-shrink-0">Áp dụng & Đặt hàng</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-5">
+        <div class="white-panel fade-up" style="position:sticky;top:100px">
+            <h5 class="fw-bold mb-3"><i class="bi bi-bag-check me-2" style="color:var(--primary)"></i>Đơn hàng của bạn</h5>
+            {% for row in cart_items %}
+            <div class="d-flex gap-2 align-items-center mb-2 pb-2" style="border-bottom:1px solid var(--border)">
+                {% if row.book.cover_image %}
+                <img src="{{ row.book.cover_image }}" alt="" style="width:45px;height:60px;object-fit:cover;border-radius:6px">
+                {% else %}
+                <div style="width:45px;height:60px;background:var(--bg-body);border-radius:6px;display:flex;align-items:center;justify-content:center">📖</div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <div style="font-size:.85rem;font-weight:600">{{ row.book.title|truncatewords:6 }}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted)">x{{ row.quantity }}</div>
+                </div>
+                <span class="fw-bold" style="font-size:.9rem;color:var(--primary)">{{ row.subtotal|floatformat:0 }}₫</span>
+            </div>
+            {% endfor %}
+            <hr style="border-color:var(--border)">
+            <div class="d-flex justify-content-between mb-1">
+                <span>Tạm tính</span>
+                <span class="fw-600">{{ cart_total|floatformat:0 }}₫</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+                <span>Phí vận chuyển</span>
+                <span class="fw-600" style="color:var(--success)">Miễn phí</span>
+            </div>
+            <hr style="border-color:var(--border)">
+            <div class="d-flex justify-content-between">
+                <span class="fw-bold" style="font-size:1.1rem">Tổng cộng</span>
+                <span class="fw-bold price" style="font-size:1.25rem">{{ cart_total|floatformat:0 }}₫</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,14 +1,23 @@
+import json
+import re
+from collections import Counter
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Q, Sum
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-from .forms import ProfileEditForm, RatingForm, RegisterForm
-from .models import Book, Category, Order, OrderItem, Rating, Wishlist
+from .forms import CheckoutForm, ProfileEditForm, RatingForm, RegisterForm
+from .models import Book, Category, Coupon, Order, OrderItem, Rating, Wishlist
 
-# ---------- Cart helpers (session: { "cart": { "book_id": quantity } }) ----------
+# ═══════════════════════════════════════════════════════════════════
+# Cart helpers (session: { "cart": { "book_id": quantity } })
+# ═══════════════════════════════════════════════════════════════════
 
 
 def _get_cart(request):
@@ -34,7 +43,9 @@ def _cart_items(request):
     ]
 
 
-# ---------- Recently viewed (session: list of book ids, newest last) ----------
+# ═══════════════════════════════════════════════════════════════════
+# Recently viewed (session: list of book ids, newest last)
+# ═══════════════════════════════════════════════════════════════════
 
 
 def _push_recently_viewed(request, book_id: int):
@@ -59,12 +70,13 @@ def _recently_viewed_books(request, limit: int = 6):
 
 
 def _order_books_by_ids(queryset, ids):
-    """Return list of books in same order as ids (ids not in queryset skipped)."""
     by_id = {b.pk: b for b in queryset}
     return [by_id[i] for i in ids if i in by_id]
 
 
-# ---------- Recommendation helpers ----------
+# ═══════════════════════════════════════════════════════════════════
+# AI Recommendation helpers
+# ═══════════════════════════════════════════════════════════════════
 
 
 def _get_popular_books(limit: int = 8):
@@ -83,19 +95,119 @@ def _get_top_rated_books(limit: int = 8):
 
 
 def _get_recommended_for_user(user, limit: int = 8):
+    """Content-based + collaborative recommendation."""
     user_orders = OrderItem.objects.filter(order__user=user)
     user_ratings = Rating.objects.filter(user=user, score__gte=4)
-    category_ids = (
+
+    # --- Content-based: categories user liked ---
+    category_ids = set(
         Category.objects.filter(books__order_items__in=user_orders)
-        .union(Category.objects.filter(books__ratings__in=user_ratings))
+        .values_list("id", flat=True)
+    ) | set(
+        Category.objects.filter(books__ratings__in=user_ratings)
         .values_list("id", flat=True)
     )
-    if not category_ids:
+
+    # --- Collaborative: books bought by users who bought same books ---
+    user_book_ids = set(user_orders.values_list("book_id", flat=True))
+    if user_book_ids:
+        similar_users = (
+            OrderItem.objects.filter(book_id__in=user_book_ids)
+            .exclude(order__user=user)
+            .values_list("order__user", flat=True)
+            .distinct()[:50]
+        )
+        collaborative_book_ids = set(
+            OrderItem.objects.filter(order__user__in=similar_users)
+            .exclude(book_id__in=user_book_ids)
+            .values_list("book_id", flat=True)
+            .distinct()[:limit]
+        )
+    else:
+        collaborative_book_ids = set()
+
+    if not category_ids and not collaborative_book_ids:
         return _get_popular_books(limit=limit)
+
+    # Combine: content-based categories + collaborative book IDs
+    qs = Book.objects.filter(
+        Q(category_id__in=category_ids) | Q(pk__in=collaborative_book_ids)
+    )
+    if user_book_ids:
+        qs = qs.exclude(pk__in=user_book_ids)
+
     return (
-        Book.objects.filter(category_id__in=category_ids)
-        .annotate(total_sold=Count("order_items"), avg_rating=Avg("ratings__score"))
+        qs.annotate(total_sold=Count("order_items"), avg_rating=Avg("ratings__score"))
         .order_by("-avg_rating", "-total_sold", "title")
+        .distinct()[:limit]
+    )
+
+
+def _get_content_similar_books(book, limit: int = 8):
+    """TF-IDF-like content similarity based on description keywords."""
+    if not book.description:
+        return (
+            Book.objects.filter(category=book.category)
+            .exclude(pk=book.pk)
+            .annotate(total_sold=Count("order_items"))
+            .order_by("-total_sold", "title")[:limit]
+        )
+
+    # Simple keyword extraction
+    words = re.findall(r'\b[a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]{3,}\b',
+                       book.description.lower())
+    word_freq = Counter(words)
+    top_keywords = [w for w, _ in word_freq.most_common(10)]
+
+    if not top_keywords:
+        return (
+            Book.objects.filter(category=book.category)
+            .exclude(pk=book.pk)
+            .annotate(total_sold=Count("order_items"))
+            .order_by("-total_sold", "title")[:limit]
+        )
+
+    # Find books with matching keywords in description
+    q_filter = Q()
+    for kw in top_keywords[:5]:
+        q_filter |= Q(description__icontains=kw)
+
+    similar = (
+        Book.objects.filter(q_filter)
+        .exclude(pk=book.pk)
+        .annotate(total_sold=Count("order_items"))
+        .order_by("-total_sold", "title")
+        .distinct()[:limit]
+    )
+
+    if similar.count() < 4:
+        # Fallback to category-based
+        fallback = (
+            Book.objects.filter(category=book.category)
+            .exclude(pk=book.pk)
+            .exclude(pk__in=similar.values_list("pk", flat=True))
+            .annotate(total_sold=Count("order_items"))
+            .order_by("-total_sold", "title")[: limit - similar.count()]
+        )
+        return list(similar) + list(fallback)
+
+    return similar
+
+
+def _also_bought_books(book, limit: int = 6):
+    """Collaborative: users who bought this book also bought..."""
+    buyers = (
+        OrderItem.objects.filter(book=book)
+        .values_list("order__user", flat=True)
+        .distinct()[:100]
+    )
+    if not buyers:
+        return []
+    return (
+        Book.objects.filter(order_items__order__user__in=buyers)
+        .exclude(pk=book.pk)
+        .annotate(buy_count=Count("order_items"))
+        .order_by("-buy_count", "title")
         .distinct()[:limit]
     )
 
@@ -126,7 +238,9 @@ def _books_queryset(search=None, category_id=None, sort="title"):
     return qs
 
 
-# ---------- Views ----------
+# ═══════════════════════════════════════════════════════════════════
+# Views
+# ═══════════════════════════════════════════════════════════════════
 
 
 def home(request):
@@ -137,12 +251,16 @@ def home(request):
     if request.user.is_authenticated:
         recommended_books = _get_recommended_for_user(request.user)
     recently_viewed = _recently_viewed_books(request)
+    total_books = Book.objects.count()
+    total_categories = Category.objects.count()
     context = {
         "books": books,
         "popular_books": popular_books,
         "top_rated_books": top_rated_books,
         "recommended_books": recommended_books,
         "recently_viewed": recently_viewed,
+        "total_books": total_books,
+        "total_categories": total_categories,
     }
     return render(request, "books/home.html", context)
 
@@ -190,12 +308,12 @@ def category_detail(request, pk: int):
 def book_detail(request, pk: int):
     book = get_object_or_404(Book, pk=pk)
     _push_recently_viewed(request, book.pk)
-    similar_books = (
-        Book.objects.filter(category=book.category)
-        .exclude(pk=book.pk)
-        .annotate(total_sold=Count("order_items"))
-        .order_by("-total_sold", "title")[:8]
-    )
+
+    # AI: content-based similar books
+    similar_books = _get_content_similar_books(book)
+    # AI: collaborative also-bought
+    also_bought = _also_bought_books(book)
+
     same_author_books = (
         Book.objects.filter(author=book.author)
         .exclude(pk=book.pk)
@@ -213,6 +331,7 @@ def book_detail(request, pk: int):
     context = {
         "book": book,
         "similar_books": similar_books,
+        "also_bought": also_bought,
         "same_author_books": same_author_books,
         "avg_rating": avg_rating,
         "book_ratings": book_ratings,
@@ -231,7 +350,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            messages.success(request, "Đăng ký thành công.")
+            messages.success(request, "Đăng ký thành công! Chào mừng bạn đến Smart Bookstore.")
             return redirect("home")
     else:
         form = RegisterForm()
@@ -256,6 +375,11 @@ def rate_book(request, book_id: int):
     return render(request, "books/rate_book.html", {"book": book, "form": form})
 
 
+# ═══════════════════════════════════════════════════════════════════
+# Cart & Checkout
+# ═══════════════════════════════════════════════════════════════════
+
+
 def cart_view(request):
     items = _cart_items(request)
     total = sum(x["subtotal"] for x in items)
@@ -265,6 +389,14 @@ def cart_view(request):
 
 def add_to_cart(request, book_id: int):
     book = get_object_or_404(Book, pk=book_id)
+
+    # Check stock
+    if not book.in_stock:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"status": "error", "message": f"'{book.title}' đã hết hàng."})
+        messages.error(request, f"'{book.title}' đã hết hàng.")
+        return redirect("book_detail", pk=book.pk)
+
     cart = _get_cart(request)
     key = str(book.pk)
     qty = request.POST.get("quantity") or request.GET.get("quantity") or 1
@@ -272,8 +404,23 @@ def add_to_cart(request, book_id: int):
         qty = max(1, int(qty))
     except (TypeError, ValueError):
         qty = 1
-    cart[key] = cart.get(key, 0) + qty
+
+    new_qty = cart.get(key, 0) + qty
+    if new_qty > book.stock:
+        new_qty = book.stock
+
+    cart[key] = new_qty
     _set_cart(request, cart)
+
+    # AJAX response
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        cart_total = sum(cart.values())
+        return JsonResponse({
+            "status": "ok",
+            "message": f"Đã thêm '{book.title}' vào giỏ hàng.",
+            "cart_count": cart_total,
+        })
+
     messages.success(request, f"Đã thêm '{book.title}' vào giỏ.")
     next_url = request.GET.get("next") or request.POST.get("next") or "book_detail"
     if next_url == "book_detail":
@@ -301,23 +448,86 @@ def update_cart(request):
     return redirect("cart")
 
 
+def remove_from_cart(request, book_id: int):
+    cart = _get_cart(request)
+    key = str(book_id)
+    if key in cart:
+        del cart[key]
+        _set_cart(request, cart)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"status": "ok", "cart_count": sum(cart.values())})
+    messages.info(request, "Đã xóa sản phẩm khỏi giỏ.")
+    return redirect("cart")
+
+
 @login_required
 def checkout(request):
     items = _cart_items(request)
     if not items:
         messages.warning(request, "Giỏ hàng trống.")
         return redirect("cart")
-    order = Order.objects.create(user=request.user)
-    for row in items:
-        OrderItem.objects.create(
-            order=order,
-            book=row["book"],
-            quantity=row["quantity"],
-            price=row["book"].price,
-        )
-    _set_cart(request, {})
-    messages.success(request, f"Đặt hàng thành công. Mã đơn: #{order.pk}")
-    return redirect("order_list")
+
+    subtotal = sum(x["subtotal"] for x in items)
+    discount_amount = 0
+    applied_coupon = None
+
+    if request.method == "POST":
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            coupon_code = form.cleaned_data.get("coupon_code", "").strip()
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(code__iexact=coupon_code)
+                    if coupon.is_valid and subtotal >= coupon.min_order_amount:
+                        applied_coupon = coupon
+                        final_total = coupon.apply_discount(subtotal)
+                        discount_amount = subtotal - final_total
+                    else:
+                        messages.warning(request, "Mã giảm giá không hợp lệ hoặc đơn hàng chưa đạt giá trị tối thiểu.")
+                        return render(request, "books/checkout.html", {
+                            "form": form, "cart_items": items, "cart_total": subtotal
+                        })
+                except Coupon.DoesNotExist:
+                    messages.warning(request, "Mã giảm giá không tồn tại.")
+                    return render(request, "books/checkout.html", {
+                        "form": form, "cart_items": items, "cart_total": subtotal
+                    })
+
+            order = Order.objects.create(
+                user=request.user,
+                shipping_address=form.cleaned_data["shipping_address"],
+                note=form.cleaned_data.get("note", ""),
+                coupon=applied_coupon,
+                discount_amount=discount_amount,
+            )
+            for row in items:
+                OrderItem.objects.create(
+                    order=order,
+                    book=row["book"],
+                    quantity=row["quantity"],
+                    price=row["book"].price,
+                )
+                # Decrease stock
+                book = row["book"]
+                book.stock = max(0, book.stock - row["quantity"])
+                book.save(update_fields=["stock"])
+
+            if applied_coupon:
+                applied_coupon.used_count += 1
+                applied_coupon.save(update_fields=["used_count"])
+
+            _set_cart(request, {})
+            messages.success(request, f"Đặt hàng thành công! Mã đơn: #{order.pk}")
+            return redirect("order_detail", pk=order.pk)
+    else:
+        form = CheckoutForm()
+
+    context = {
+        "form": form,
+        "cart_items": items,
+        "cart_total": subtotal,
+    }
+    return render(request, "books/checkout.html", context)
 
 
 @login_required
@@ -326,13 +536,23 @@ def order_list(request):
     return render(request, "books/order_list.html", {"orders": orders})
 
 
-# ---------- Wishlist ----------
+@login_required
+def order_detail(request, pk: int):
+    order = get_object_or_404(Order, pk=pk, user=request.user)
+    return render(request, "books/order_detail.html", {"order": order})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Wishlist
+# ═══════════════════════════════════════════════════════════════════
 
 
 @login_required
 def wishlist_add(request, book_id: int):
     book = get_object_or_404(Book, pk=book_id)
-    Wishlist.objects.get_or_create(user=request.user, book=book)
+    _, created = Wishlist.objects.get_or_create(user=request.user, book=book)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"status": "ok", "action": "added", "message": f"Đã thêm '{book.title}' vào yêu thích."})
     messages.success(request, f"Đã thêm '{book.title}' vào danh sách yêu thích.")
     next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or "book_detail"
     if "book_detail" in str(next_url) or not next_url:
@@ -344,6 +564,8 @@ def wishlist_add(request, book_id: int):
 def wishlist_remove(request, book_id: int):
     book = get_object_or_404(Book, pk=book_id)
     Wishlist.objects.filter(user=request.user, book=book).delete()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"status": "ok", "action": "removed", "message": f"Đã bỏ '{book.title}' khỏi yêu thích."})
     messages.info(request, "Đã bỏ khỏi danh sách yêu thích.")
     next_url = request.GET.get("next") or request.META.get("HTTP_REFERER")
     if next_url and "wishlist" in next_url:
@@ -357,12 +579,23 @@ def wishlist_view(request):
     return render(request, "books/wishlist.html", {"wishlist_items": items})
 
 
-# ---------- Profile ----------
+# ═══════════════════════════════════════════════════════════════════
+# Profile
+# ═══════════════════════════════════════════════════════════════════
 
 
 @login_required
 def profile(request):
-    return render(request, "books/profile.html", {"profile_user": request.user})
+    order_count = request.user.orders.count()
+    wishlist_count = request.user.wishlist_items.count()
+    rating_count = request.user.ratings.count()
+    context = {
+        "profile_user": request.user,
+        "order_count": order_count,
+        "wishlist_count": wishlist_count,
+        "rating_count": rating_count,
+    }
+    return render(request, "books/profile.html", context)
 
 
 @login_required
@@ -378,7 +611,35 @@ def profile_edit(request):
     return render(request, "books/profile_edit.html", {"form": form})
 
 
-# ---------- Static ----------
+# ═══════════════════════════════════════════════════════════════════
+# Live Search API
+# ═══════════════════════════════════════════════════════════════════
+
+
+def api_search(request):
+    q = request.GET.get("q", "").strip()
+    if len(q) < 2:
+        return JsonResponse({"results": []})
+    books = Book.objects.filter(
+        Q(title__icontains=q) | Q(author__icontains=q)
+    )[:8]
+    results = [
+        {
+            "id": b.pk,
+            "title": b.title,
+            "author": b.author,
+            "price": str(b.price),
+            "cover": b.cover_image or "",
+            "url": f"/books/{b.pk}/",
+        }
+        for b in books
+    ]
+    return JsonResponse({"results": results})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Static pages
+# ═══════════════════════════════════════════════════════════════════
 
 
 def about(request):

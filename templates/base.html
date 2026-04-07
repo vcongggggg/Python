@@ -1,102 +1,721 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Smart Bookstore - Website bán sách trực tuyến với hệ thống gợi ý AI thông minh">
     <title>{% block title %}Smart Bookstore{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root {
-            --bs-primary: #2563eb;
-            --bs-primary-rgb: 37, 99, 235;
-            --accent: #f59e0b;
-            --bg-body: #f8fafc;
-            --card-shadow: 0 1px 3px rgba(0,0,0,.08);
-            --card-hover: 0 12px 24px rgba(0,0,0,.1);
+            --primary: #6C5CE7;
+            --primary-dark: #5A4BD1;
+            --primary-light: #A29BFE;
+            --accent: #FD79A8;
+            --accent2: #FDCB6E;
+            --success: #00B894;
+            --danger: #E17055;
+            --bg-body: #F0F2F5;
+            --bg-card: #FFFFFF;
+            --text-primary: #2D3436;
+            --text-secondary: #636E72;
+            --text-muted: #B2BEC3;
+            --border: #E8ECEF;
+            --gradient-1: linear-gradient(135deg, #6C5CE7 0%, #A29BFE 100%);
+            --gradient-2: linear-gradient(135deg, #FD79A8 0%, #FDCB6E 100%);
+            --gradient-3: linear-gradient(135deg, #00B894 0%, #00CEC9 100%);
+            --gradient-hero: linear-gradient(135deg, #2D3436 0%, #6C5CE7 50%, #A29BFE 100%);
+            --shadow-sm: 0 2px 8px rgba(108,92,231,.08);
+            --shadow-md: 0 8px 24px rgba(108,92,231,.12);
+            --shadow-lg: 0 16px 48px rgba(108,92,231,.16);
+            --shadow-hover: 0 12px 32px rgba(108,92,231,.2);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-lg: 24px;
+            --glass: rgba(255,255,255,.7);
+            --glass-border: rgba(255,255,255,.3);
+            --transition: all .3s cubic-bezier(.4,0,.2,1);
         }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-body); color: #1e293b; }
-        .navbar-bookstore {
-            background: #fff !important;
-            box-shadow: 0 1px 0 rgba(0,0,0,.06);
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.6;
         }
-        .navbar-bookstore .navbar-brand { font-weight: 700; color: #0f172a; }
-        .navbar-bookstore .nav-link { color: #475569 !important; font-weight: 500; }
-        .navbar-bookstore .nav-link:hover { color: var(--bs-primary) !important; }
-        .navbar-bookstore .btn-search { background: var(--bs-primary); color: #fff; border: none; }
-        .navbar-bookstore .btn-search:hover { background: #1d4ed8; color: #fff; }
-        .navbar-bookstore .form-control:focus { border-color: var(--bs-primary); box-shadow: 0 0 0 0.2rem rgba(37,99,235,.2); }
-        .footer-bookstore {
+
+        /* ───── Scrollbar ───── */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* ───── Navbar ───── */
+        .navbar-bs {
+            background: rgba(255,255,255,.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+            padding: .8rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            transition: var(--transition);
+        }
+        .navbar-bs.scrolled {
+            box-shadow: var(--shadow-sm);
+        }
+        .navbar-bs .navbar-brand {
+            font-weight: 800;
+            font-size: 1.35rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -.5px;
+        }
+        .navbar-bs .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 500;
+            font-size: .925rem;
+            padding: .5rem .85rem !important;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            position: relative;
+        }
+        .navbar-bs .nav-link:hover,
+        .navbar-bs .nav-link.active {
+            color: var(--primary) !important;
+            background: rgba(108,92,231,.06);
+        }
+        .navbar-bs .badge {
+            background: var(--gradient-2) !important;
+            font-size: .7rem;
+            padding: .25em .55em;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* ───── Search bar ───── */
+        .search-wrapper {
+            position: relative;
+        }
+        .search-wrapper input {
+            border: 2px solid var(--border);
+            border-radius: 50px;
+            padding: .5rem 1rem .5rem 2.5rem;
+            width: 240px;
+            font-size: .9rem;
+            transition: var(--transition);
+            background: var(--bg-body);
+        }
+        .search-wrapper input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(108,92,231,.12);
+            outline: none;
+            width: 300px;
+        }
+        .search-wrapper .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        /* Live search dropdown */
+        .live-search-results {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
             background: #fff;
-            border-top: 1px solid #e2e8f0;
-            color: #64748b;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1050;
+            display: none;
+            border: 1px solid var(--border);
         }
-        .footer-bookstore a { color: #475569; text-decoration: none; }
-        .footer-bookstore a:hover { color: var(--bs-primary); }
-        .section-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 3px solid var(--accent); display: inline-block; }
+        .live-search-results.show { display: block; }
+        .live-search-item {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            padding: .75rem 1rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: var(--transition);
+            border-bottom: 1px solid var(--border);
+        }
+        .live-search-item:last-child { border-bottom: none; }
+        .live-search-item:hover { background: rgba(108,92,231,.04); }
+        .live-search-item img {
+            width: 40px;
+            height: 55px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .live-search-item .info { flex: 1; }
+        .live-search-item .title { font-weight: 600; font-size: .9rem; }
+        .live-search-item .author { font-size: .8rem; color: var(--text-muted); }
+        .live-search-item .price { font-weight: 700; color: var(--primary); font-size: .85rem; }
+
+        /* ───── Auth buttons ───── */
+        .btn-auth {
+            background: var(--gradient-1);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: .45rem 1.25rem;
+            font-weight: 600;
+            font-size: .875rem;
+            transition: var(--transition);
+        }
+        .btn-auth:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(108,92,231,.3);
+            color: #fff;
+        }
+        .btn-auth-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 50px;
+            padding: .4rem 1.25rem;
+            font-weight: 600;
+            font-size: .875rem;
+            transition: var(--transition);
+        }
+        .btn-auth-outline:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* ───── Cards ───── */
         .card-book {
             border: none;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            transition: transform .2s, box-shadow .2s;
+            border-radius: var(--radius);
+            background: var(--bg-card);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
             overflow: hidden;
+            position: relative;
         }
-        .card-book:hover { transform: translateY(-4px); box-shadow: var(--card-hover); }
-        .card-book .card-img-top { height: 220px; object-fit: cover; background: #e2e8f0; }
-        .card-book .card-body { padding: 1rem; }
-        .card-book .card-title { font-size: 1rem; font-weight: 600; color: #0f172a; }
-        .card-book .card-title a { color: inherit; text-decoration: none; }
-        .card-book .card-title a:hover { color: var(--bs-primary); }
-        .card-book .price { color: var(--bs-primary); font-weight: 700; font-size: 1.1rem; }
-        .btn-primary { background: var(--bs-primary); border-color: var(--bs-primary); }
-        .btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
-        .empty-state { padding: 2.5rem; text-align: center; color: #64748b; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; }
+        .card-book:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+        }
+        .card-book .card-img-top {
+            height: 240px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #DFE6E9, #F0F2F5);
+            transition: transform .5s ease;
+        }
+        .card-book:hover .card-img-top {
+            transform: scale(1.05);
+        }
+        .card-book .img-wrapper {
+            overflow: hidden;
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+        .card-book .card-body { padding: 1.15rem; }
+        .card-book .card-title {
+            font-size: .95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: .25rem;
+        }
+        .card-book .card-title a {
+            color: inherit;
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .card-book .card-title a:hover { color: var(--primary); }
+        .card-book .author { font-size: .82rem; color: var(--text-muted); }
+        .card-book .price {
+            font-weight: 700;
+            font-size: 1.05rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .card-book .stock-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: .2rem .65rem;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+        }
+        .stock-in { background: rgba(0,184,148,.85); color: #fff; }
+        .stock-out { background: rgba(225,112,85,.9); color: #fff; }
+
+        /* ───── Buttons ───── */
+        .btn-gradient {
+            background: var(--gradient-1);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            padding: .55rem 1.5rem;
+            transition: var(--transition);
+            font-size: .9rem;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108,92,231,.35);
+            color: #fff;
+        }
+        .btn-gradient-sm {
+            padding: .35rem 1rem;
+            font-size: .82rem;
+            border-radius: 8px;
+        }
+        .btn-gradient-accent {
+            background: var(--gradient-2);
+        }
+        .btn-gradient-accent:hover {
+            box-shadow: 0 6px 20px rgba(253,121,168,.35);
+        }
+        .btn-gradient-success {
+            background: var(--gradient-3);
+        }
+        .btn-gradient-success:hover {
+            box-shadow: 0 6px 20px rgba(0,184,148,.35);
+        }
+        .btn-glass {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+            padding: .45rem 1.2rem;
+            transition: var(--transition);
+        }
+        .btn-glass:hover {
+            background: #fff;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-icon {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: none;
+            transition: var(--transition);
+            font-size: 1.1rem;
+        }
+        .btn-icon-heart {
+            background: rgba(253,121,168,.1);
+            color: var(--accent);
+        }
+        .btn-icon-heart:hover, .btn-icon-heart.active {
+            background: var(--accent);
+            color: #fff;
+            transform: scale(1.1);
+        }
+        .btn-icon-cart {
+            background: rgba(108,92,231,.1);
+            color: var(--primary);
+        }
+        .btn-icon-cart:hover {
+            background: var(--primary);
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* ───── Section titles ───── */
+        .section-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+        .section-title .icon {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 1.1rem;
+        }
+        .section-title .icon-purple { background: rgba(108,92,231,.1); color: var(--primary); }
+        .section-title .icon-pink { background: rgba(253,121,168,.1); color: var(--accent); }
+        .section-title .icon-green { background: rgba(0,184,148,.1); color: var(--success); }
+        .section-title .icon-yellow { background: rgba(253,203,110,.15); color: #E17055; }
+        .section-title .line {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        /* ───── Glass panels ───── */
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+        .white-panel {
+            background: #fff;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ───── Stars ───── */
+        .stars { color: #FDCB6E; font-size: 1rem; }
+        .stars .bi-star-fill { color: #FDCB6E; }
+        .stars .bi-star { color: #DFE6E9; }
+        .star-selector { display: inline-flex; gap: .25rem; direction: rtl; }
+        .star-selector .star-btn {
+            font-size: 1.75rem;
+            color: #DFE6E9;
+            cursor: pointer;
+            transition: color .15s, transform .15s;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+        .star-selector .star-btn:hover,
+        .star-selector .star-btn.active { color: #FDCB6E; transform: scale(1.2); }
+        .star-selector .star-btn:hover ~ .star-btn,
+        .star-selector .star-btn.active ~ .star-btn { color: #FDCB6E; }
+
+        /* ───── Toast ───── */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast-bs {
+            background: #fff;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            min-width: 300px;
+            animation: slideIn .4s ease;
+            border-left: 4px solid var(--success);
+        }
+        .toast-bs.error { border-left-color: var(--danger); }
+        .toast-bs .toast-icon { font-size: 1.3rem; }
+        .toast-bs .toast-msg { flex: 1; font-size: .9rem; font-weight: 500; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        /* ───── Alert messages ───── */
+        .alert-bs {
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: .85rem 1.25rem;
+            font-weight: 500;
+            font-size: .9rem;
+        }
+        .alert-bs.alert-success {
+            background: rgba(0,184,148,.1);
+            color: #00B894;
+        }
+        .alert-bs.alert-info {
+            background: rgba(108,92,231,.1);
+            color: var(--primary);
+        }
+        .alert-bs.alert-warning {
+            background: rgba(253,203,110,.15);
+            color: #E17055;
+        }
+        .alert-bs.alert-error, .alert-bs.alert-danger {
+            background: rgba(225,112,85,.1);
+            color: #E17055;
+        }
+
+        /* ───── Empty state ───── */
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+            background: #fff;
+            border-radius: var(--radius);
+            border: 2px dashed var(--border);
+        }
+        .empty-state .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* ───── Footer ───── */
+        .footer-bs {
+            background: linear-gradient(135deg, #2D3436 0%, #1A1A2E 100%);
+            color: rgba(255,255,255,.7);
+            padding: 3rem 0 2rem;
+            margin-top: 4rem;
+        }
+        .footer-bs h6 {
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        .footer-bs a {
+            color: rgba(255,255,255,.6);
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-bs a:hover { color: var(--primary-light); }
+        .footer-bs .footer-brand {
+            font-weight: 800;
+            font-size: 1.3rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .footer-bs .social-icon {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,.08);
+            color: rgba(255,255,255,.6);
+            transition: var(--transition);
+            font-size: 1rem;
+        }
+        .footer-bs .social-icon:hover {
+            background: var(--primary);
+            color: #fff;
+            transform: translateY(-3px);
+        }
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,.08);
+            padding-top: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        /* ───── Pagination ───── */
+        .pagination .page-link {
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            border-radius: 10px !important;
+            margin: 0 3px;
+            padding: .5rem .85rem;
+            transition: var(--transition);
+        }
+        .pagination .page-link:hover {
+            background: rgba(108,92,231,.08);
+            color: var(--primary);
+        }
+        .pagination .page-item.active .page-link {
+            background: var(--gradient-1);
+            color: #fff;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: var(--text-muted);
+        }
+
+        /* ───── Animations ───── */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(24px);
+            animation: fadeUp .6s ease forwards;
+        }
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up:nth-child(2) { animation-delay: .08s; }
+        .fade-up:nth-child(3) { animation-delay: .16s; }
+        .fade-up:nth-child(4) { animation-delay: .24s; }
+        .fade-up:nth-child(5) { animation-delay: .32s; }
+        .fade-up:nth-child(6) { animation-delay: .40s; }
+
+        /* ───── Responsive ───── */
+        @media (max-width: 768px) {
+            .search-wrapper input { width: 180px; }
+            .search-wrapper input:focus { width: 220px; }
+            .card-book .card-img-top { height: 180px; }
+        }
+
+        /* ───── Order timeline ───── */
+        .order-timeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 0;
+            position: relative;
+        }
+        .order-timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--border);
+            z-index: 0;
+            transform: translateY(-50%);
+        }
+        .timeline-progress {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 3px;
+            background: var(--gradient-1);
+            z-index: 1;
+            transform: translateY(-50%);
+            transition: width .6s ease;
+            border-radius: 3px;
+        }
+        .timeline-step {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .5rem;
+        }
+        .timeline-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .85rem;
+            color: var(--text-muted);
+            transition: var(--transition);
+        }
+        .timeline-step.active .timeline-dot {
+            background: var(--gradient-1);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(108,92,231,.3);
+        }
+        .timeline-step.active .timeline-label {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .timeline-label {
+            font-size: .72rem;
+            color: var(--text-muted);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* ───── Misc ───── */
+        .breadcrumb-item a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-item.active { color: var(--text-muted); }
+        .form-control, .form-select {
+            border-radius: var(--radius-sm);
+            border: 2px solid var(--border);
+            padding: .6rem 1rem;
+            transition: var(--transition);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(108,92,231,.1);
+        }
+        .badge-category {
+            background: rgba(108,92,231,.08);
+            color: var(--primary);
+            font-weight: 600;
+            padding: .35rem .8rem;
+            border-radius: 50px;
+            font-size: .82rem;
+        }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
-<nav class="navbar navbar-expand-lg navbar-bookstore py-3 mb-0">
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-bs" id="mainNav">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'home' %}">📚 Smart Bookstore</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <i class="bi bi-book-half me-1"></i> Smart Bookstore
+        </a>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Trang chủ</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'book_list' %}">Tất cả sách</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'category_list' %}">Thể loại</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'home' %}"><i class="bi bi-house me-1"></i>Trang chủ</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'book_list' %}"><i class="bi bi-grid me-1"></i>Tất cả sách</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'category_list' %}"><i class="bi bi-tag me-1"></i>Thể loại</a></li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'cart' %}">Giỏ hàng {% if cart_count %}<span class="badge bg-danger rounded-pill">{{ cart_count }}</span>{% endif %}</a>
+                    <a class="nav-link" href="{% url 'cart' %}">
+                        <i class="bi bi-bag me-1"></i>Giỏ hàng
+                        <span class="badge" id="cart-badge" {% if not cart_count %}style="display:none"{% endif %}>{{ cart_count }}</span>
+                    </a>
                 </li>
                 {% if user.is_authenticated %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'order_list' %}">Đơn hàng</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'wishlist' %}">Yêu thích</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'order_list' %}"><i class="bi bi-receipt me-1"></i>Đơn hàng</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'wishlist' %}"><i class="bi bi-heart me-1"></i>Yêu thích</a></li>
                 {% endif %}
             </ul>
-            <form method="get" action="{% url 'book_list' %}" class="d-flex me-3" role="search">
-                <input name="q" class="form-control me-2" type="search" placeholder="Tìm sách, tác giả..." value="{{ request.GET.q }}" style="width:200px; border-radius:8px">
-                <button class="btn btn-search btn-sm" type="submit">Tìm</button>
-            </form>
-            <ul class="navbar-nav">
+            <div class="search-wrapper me-3">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" id="live-search" placeholder="Tìm sách, tác giả..." autocomplete="off">
+                <div class="live-search-results" id="search-results"></div>
+            </div>
+            <ul class="navbar-nav align-items-center gap-2">
                 {% if user.is_authenticated %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'profile' %}">{{ user.username }}</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Đăng xuất</a></li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'profile' %}"><i class="bi bi-person-circle me-1"></i>{{ user.username }}</a>
+                </li>
+                <li class="nav-item">
+                    <form method="post" action="{% url 'logout' %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-glass btn-sm">
+                            <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
+                        </button>
+                    </form>
+                </li>
                 {% else %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Đăng nhập</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Đăng ký</a></li>
+                <li class="nav-item"><a href="{% url 'login' %}" class="btn btn-auth-outline btn-sm">Đăng nhập</a></li>
+                <li class="nav-item"><a href="{% url 'register' %}" class="btn btn-auth btn-sm">Đăng ký</a></li>
                 {% endif %}
             </ul>
         </div>
     </div>
 </nav>
 
+<!-- Main content -->
 <main class="container flex-grow-1 py-4">
     {% if messages %}
     <div class="mb-3">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        <div class="alert alert-bs alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
             {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         {% endfor %}
     </div>
@@ -104,23 +723,191 @@
     {% block content %}{% endblock %}
 </main>
 
-<footer class="footer-bookstore mt-auto py-4">
+<!-- Footer -->
+<footer class="footer-bs mt-auto">
     <div class="container">
-        <div class="row">
-            <div class="col-md-6">
-                <h6 class="fw-bold text-dark">Smart Bookstore</h6>
-                <p class="small mb-0">Website bán sách với gợi ý thông minh.</p>
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="footer-brand mb-2"><i class="bi bi-book-half"></i> Smart Bookstore</div>
+                <p class="small mb-3">Website bán sách trực tuyến với hệ thống gợi ý AI thông minh. Khám phá hàng ngàn cuốn sách hay mỗi ngày.</p>
+                <div class="d-flex gap-2">
+                    <a href="#" class="social-icon"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="social-icon"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="social-icon"><i class="bi bi-twitter-x"></i></a>
+                    <a href="#" class="social-icon"><i class="bi bi-github"></i></a>
+                </div>
             </div>
-            <div class="col-md-6 text-md-end">
-                <a href="{% url 'about' %}">Giới thiệu</a>
-                <span class="mx-2">·</span>
-                <a href="{% url 'contact' %}">Liên hệ</a>
+            <div class="col-lg-2 col-6">
+                <h6>Khám phá</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2"><a href="{% url 'book_list' %}">Tất cả sách</a></li>
+                    <li class="mb-2"><a href="{% url 'category_list' %}">Thể loại</a></li>
+                    <li class="mb-2"><a href="{% url 'book_list' %}?sort=popular">Bán chạy</a></li>
+                    <li><a href="{% url 'book_list' %}?sort=newest">Mới nhất</a></li>
+                </ul>
             </div>
+            <div class="col-lg-2 col-6">
+                <h6>Tài khoản</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2"><a href="{% url 'profile' %}">Thông tin</a></li>
+                    <li class="mb-2"><a href="{% url 'order_list' %}">Đơn hàng</a></li>
+                    <li class="mb-2"><a href="{% url 'wishlist' %}">Yêu thích</a></li>
+                    <li><a href="{% url 'cart' %}">Giỏ hàng</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-4">
+                <h6>Liên hệ</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2"><i class="bi bi-envelope me-2"></i>support@smartbookstore.vn</li>
+                    <li class="mb-2"><i class="bi bi-telephone me-2"></i>1900 xxxx</li>
+                    <li><i class="bi bi-clock me-2"></i>8:00 - 22:00 (T2 - CN)</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom text-center">
+            <p class="small mb-0">&copy; 2026 Smart Bookstore. Built with Django &amp; AI.</p>
         </div>
     </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ─── Navbar scroll effect ───
+const nav = document.getElementById('mainNav');
+window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// ─── Live Search ───
+const searchInput = document.getElementById('live-search');
+const searchResults = document.getElementById('search-results');
+let searchTimeout;
+if (searchInput) {
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        const q = this.value.trim();
+        if (q.length < 2) { searchResults.classList.remove('show'); return; }
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/search/?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.results.length) {
+                        searchResults.innerHTML = '<div class="p-3 text-center text-muted small">Không tìm thấy kết quả</div>';
+                    } else {
+                        searchResults.innerHTML = data.results.map(b => `
+                            <a href="${b.url}" class="live-search-item">
+                                ${b.cover ? `<img src="${b.cover}" alt="">` : '<div style="width:40px;height:55px;background:#F0F2F5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.2rem">📖</div>'}
+                                <div class="info">
+                                    <div class="title">${b.title}</div>
+                                    <div class="author">${b.author}</div>
+                                </div>
+                                <div class="price">${Number(b.price).toLocaleString()}₫</div>
+                            </a>
+                        `).join('');
+                    }
+                    searchResults.classList.add('show');
+                });
+        }, 300);
+    });
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.classList.remove('show');
+        }
+    });
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const q = searchInput.value.trim();
+            if (q) window.location.href = `/books/?q=${encodeURIComponent(q)}`;
+        }
+    });
+}
+
+// ─── AJAX Helpers ───
+function getCookie(name) {
+    let val = null;
+    document.cookie.split(';').forEach(c => {
+        c = c.trim();
+        if (c.startsWith(name + '=')) val = decodeURIComponent(c.substring(name.length + 1));
+    });
+    return val;
+}
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast-bs ${type === 'error' ? 'error' : ''}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${type === 'error' ? '❌' : '✅'}</span>
+        <span class="toast-msg">${message}</span>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut .3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function updateCartBadge(count) {
+    const badge = document.getElementById('cart-badge');
+    if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+}
+
+// ─── AJAX Add to Cart ───
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.ajax-add-cart');
+    if (!btn) return;
+    e.preventDefault();
+    const bookId = btn.dataset.bookId;
+    fetch(`/cart/add/${bookId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: new URLSearchParams({ quantity: 1 }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        showToast(data.message, data.status === 'ok' ? 'success' : 'error');
+        if (data.cart_count !== undefined) updateCartBadge(data.cart_count);
+    })
+    .catch(() => showToast('Có lỗi xảy ra!', 'error'));
+});
+
+// ─── AJAX Wishlist ───
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.ajax-wishlist');
+    if (!btn) return;
+    e.preventDefault();
+    const bookId = btn.dataset.bookId;
+    const action = btn.dataset.action; // 'add' or 'remove'
+    fetch(`/wishlist/${action}/${bookId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(r => r.json())
+    .then(data => {
+        showToast(data.message);
+        if (data.action === 'added') {
+            btn.dataset.action = 'remove';
+            btn.classList.add('active');
+            btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+        } else {
+            btn.dataset.action = 'add';
+            btn.classList.remove('active');
+            btn.innerHTML = '<i class="bi bi-heart"></i>';
+        }
+    })
+    .catch(() => showToast('Có lỗi xảy ra!', 'error'));
+});
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
