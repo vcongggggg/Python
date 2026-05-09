@@ -83,7 +83,13 @@
                     <tr>
                         <td><a href="{% url 'order_detail' order.pk %}" style="color:var(--primary);font-weight:600">#{{ order.pk }}</a></td>
                         <td>{{ order.user.username }}</td>
-                        <td><span class="badge-category" style="font-size:.75rem">{{ order.status_display_vi }}</span></td>
+                        <td>
+                            <select class="form-select form-select-sm status-updater" data-order-id="{{ order.pk }}" style="width:auto;border-radius:50px;font-size:.75rem;padding:.15rem .5rem">
+                                {% for val, label in order_statuses %}
+                                <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
                         <td class="fw-bold">{{ order.total|floatformat:0 }}</td>
                         <td style="color:var(--text-muted)">{{ order.created_at|date:"d/m H:i" }}</td>
                     </tr>
@@ -220,6 +226,33 @@ new Chart(document.getElementById('ratingChart'), {
             x: { grid: { display: false } },
         }
     }
+});
+// Status Updater
+document.querySelectorAll('.status-updater').forEach(select => {
+    select.addEventListener('change', function() {
+        const orderId = this.dataset.orderId;
+        const newStatus = this.value;
+        const url = `/dashboard/order/${orderId}/status/`;
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({ status: newStatus })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                showToast(data.message);
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(() => showToast('Có lỗi xảy ra khi cập nhật!', 'error'));
+    });
 });
 </script>
 {% endblock %}

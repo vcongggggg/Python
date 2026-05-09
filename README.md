@@ -1,192 +1,103 @@
-# Smart Bookstore — Website gợi ý sản phẩm thông minh
+# Smart Bookstore — Hệ thống gợi ý sách thông minh (Phase 2 Enhanced)
 
-Đề tài môn Python: **Website bán sách trực tuyến** với hệ thống gợi ý sách dựa trên AI (content-based recommendation).
-
----
-
-## 1. Tổng quan
-
-- **Công nghệ:** Django (Python), SQLite, Bootstrap 5  
-- **Loại đề tài:** Web (Django) + AI (thuật toán gợi ý)  
-- **Mô tả:** Cửa hàng sách online giả lập: xem sách, giỏ hàng, đặt hàng, đánh giá, danh sách yêu thích và **gợi ý sách thông minh** theo thể loại/sở thích người dùng.
+Đề tài môn Python: **Website bán sách trực tuyến** tích hợp AI (Content-based Recommendation, Sentiment Analysis & User Profiling).
 
 ---
 
-## 2. Công nghệ sử dụng
+## 1. Tổng quan dự án
 
-| Thành phần   | Công nghệ                    |
-|-------------|------------------------------|
-| Backend     | Django 6.x                    |
-| Database    | SQLite3                       |
-| Frontend    | HTML, Bootstrap 5, Django Template |
-| Ngôn ngữ    | Python 3.12                   |
+Dự án đã hoàn thành **Phase 2** với các nâng cấp mạnh mẽ về trải nghiệm người dùng (UX), tính năng tương tác thời gian thực (AJAX) và ứng dụng AI chuyên sâu hơn.
+
+- **Công nghệ:** Django 6.x, SQLite, Bootstrap 5, Chart.js.
+- **Tính năng nổi bật:** Gợi ý sách thông minh, Phân tích cảm nhận người dùng (AI Sentiment), Reading DNA, và Quản lý đơn hàng thời gian thực.
 
 ---
 
-## 3. Chức năng chính
+## 2. Các chức năng mới (Phase 2 Update)
 
-### 3.1 Khách (chưa đăng nhập)
+### 2.1 Trải nghiệm người dùng (UX) & AJAX
+- **Real-time Wishlist & Cart:** Thêm/xóa sản phẩm khỏi yêu thích và giỏ hàng ngay lập tức mà không cần tải lại trang. Cập nhật Badge số lượng ở Navbar theo thời gian thực.
+- **Thanh toán thông minh:** Áp dụng mã giảm giá (Coupon) và xem trước số tiền được giảm bằng AJAX trước khi đặt hàng.
+- **Giao diện hiện đại:** Navbar được tái cấu trúc thông minh, hỗ trợ Dark Mode hoàn chỉnh, hình ảnh bìa sách hiển thị trọn vẹn (Aspect-ratio fix).
 
-- Xem **trang chủ**: sách mới, bán chạy, đánh giá cao, đã xem gần đây.
-- **Tìm kiếm & lọc**: tìm theo tên sách/tác giả, lọc theo thể loại, sắp xếp (giá, tên, mới nhất, bán chạy, đánh giá).
-- **Phân trang** danh sách sách (12 sách/trang).
-- **Duyệt theo thể loại**: danh sách thể loại → trang sách theo từng thể loại.
-- Xem **chi tiết sách**: mô tả, giá, sách cùng thể loại, cùng tác giả.
-- **Giỏ hàng** (session): thêm/sửa số lượng; đặt hàng cần đăng nhập.
+### 2.2 AI & Dữ liệu chuyên sâu
+- **Reading DNA:** Phân tích phong cách đọc sách của người dùng (Explorer, Dreamer, Critic...) dựa trên lịch sử mua hàng và đánh giá.
+- **AI Sentiment Analysis:** Tự động phân tích sắc thái nhận xét của khách hàng (Tích cực, Tiêu cực, Trung lập) để tóm tắt chất lượng sách.
+- **Explainable Recommendations:** Gợi ý sách kèm lý do cụ thể (Ví dụ: "Vì bạn đã mua sách của tác giả X", "Cùng thể loại Y mà bạn yêu thích").
+- **Reading Milestones:** Hệ thống thành tựu (Gamification) tặng huy hiệu dựa trên hoạt động đọc sách (Đại tuyển thủ, Bác học đa tài, Nhà phê bình ưu tú...).
 
-### 3.2 Người dùng (đã đăng nhập)
-
-- Tất cả chức năng khách.
-- **Đăng ký / Đăng nhập / Đăng xuất**.
-- **Giỏ hàng & đặt hàng**: thanh toán (tạo đơn), xem **đơn hàng của tôi**.
-- **Đánh giá sách**: 1–5 sao + nhận xét; xem đánh giá và điểm trung bình.
-- **Danh sách yêu thích (Wishlist)**: thêm/bỏ sách, xem trang yêu thích.
-- **Tài khoản**: xem thông tin, chỉnh sửa họ tên, email.
-
-### 3.3 AI — Gợi ý sách thông minh
-
-- **Sách bán chạy:** theo số lượng đã bán (`OrderItem`).
-- **Sách được đánh giá cao:** theo điểm trung bình và số lượt đánh giá.
-- **Gợi ý cho bạn (trang chủ):** dựa trên thể loại sách user đã mua hoặc đánh giá ≥ 4 sao → gợi ý sách cùng thể loại (content-based).
-- **Sách tương tự (trang chi tiết):** cùng thể loại, sắp theo độ phổ biến.
-- **Cùng tác giả:** sách cùng `author`.
+### 2.3 Dashboard Quản lý (Dành cho Staff)
+- **Thống kê trực quan:** Biểu đồ doanh thu theo tháng, phân bổ thể loại và top sách bán chạy (sử dụng Chart.js).
+- **Quản lý đơn hàng AJAX:** Cập nhật trạng thái đơn hàng (Chờ xác nhận, Đang giao, Đã giao...) trực tiếp từ bảng thống kê.
+- **Báo cáo dữ liệu:** Xuất dữ liệu Sách và Đơn hàng ra file CSV (UTF-8-SIG hỗ trợ Excel).
+- **Cảnh báo tồn kho:** Tự động liệt kê các đầu sách sắp hết hàng (tồn kho < 10).
 
 ---
 
-## 4. Cấu trúc project
+## 3. Cấu trúc Project (Cập nhật)
 
 ```
 Project/
-├── manage.py
-├── README.md
-├── bookstore/                 # Django project
-│   ├── settings.py
-│   ├── urls.py
-│   ├── wsgi.py
-│   └── asgi.py
+├── bookstore/                 # Cấu hình dự án Django
 ├── books/                     # App chính
-│   ├── models.py              # Category, Book, Order, OrderItem, Rating, Wishlist
-│   ├── views.py               # Toàn bộ view
-│   ├── urls.py
-│   ├── forms.py               # RegisterForm, RatingForm, ProfileEditForm
-│   ├── admin.py               # Đăng ký model cho admin
-│   ├── context_processors.py  # cart_count, recently_viewed_ids
-│   └── migrations/
+│   ├── context_processors.py  # Xử lý dữ liệu toàn cục (Cart, Wishlist, Reading DNA)
+│   ├── models.py              # Category, Book, Order, Rating, Wishlist, Coupon
+│   ├── views.py               # Chứa logic AI, AJAX API và Staff Dashboard
+│   ├── seed_books.py          # Lệnh import dữ liệu mẫu từ Open Library
+│   └── ...
 ├── templates/
-│   ├── base.html              # Layout chung, navbar, footer
-│   ├── registration/
-│   │   ├── login.html
-│   │   └── register.html
+│   ├── base.html              # Navbar (Redesigned), Footer, Theme Engine
 │   └── books/
-│       ├── home.html
-│       ├── book_list.html     # Tìm kiếm, lọc, phân trang
-│       ├── book_detail.html
-│       ├── category_list.html
-│       ├── category_detail.html
-│       ├── cart.html
-│       ├── order_list.html
-│       ├── wishlist.html
-│       ├── profile.html
-│       ├── profile_edit.html
-│       ├── rate_book.html
-│       ├── about.html
-│       └── contact.html
-└── db.sqlite3                 # Database (tạo sau khi migrate)
+│       ├── dashboard.html     # Staff Dashboard với biểu đồ
+│       ├── reading_dna.html   # Trang phân tích AI cá nhân
+│       ├── checkout.html      # Trang thanh toán tích hợp AJAX Coupon
+│       └── ...
+└── static/                    # Assets, CSS, JS
 ```
 
 ---
 
-## 5. Mô hình dữ liệu (Models)
+## 4. Công nghệ & Thư viện
 
-| Model      | Mô tả ngắn |
-|-----------|-------------|
-| **Category** | Thể loại sách (tên). |
-| **Book**     | Sách: title, author, description, price, category, published_year, num_pages, cover_image, created_at. |
-| **Order**    | Đơn hàng: user, created_at. Có `total` (property). |
-| **OrderItem**| Chi tiết đơn: order, book, quantity, price. Có `subtotal` (property). |
-| **Rating**   | Đánh giá: user, book, score (1–5), comment, created_at. Unique (user, book). |
-| **Wishlist** | Yêu thích: user, book, added_at. Unique (user, book). |
-
-Quan hệ chính: `Book` → `Category` (FK); `Order` → `User`, `OrderItem` → `Order` & `Book`; `Rating`, `Wishlist` → `User` & `Book`.
+| Thành phần | Công nghệ |
+| :--- | :--- |
+| **Backend** | Django 6.1 (Python 3.12) |
+| **Frontend UI** | Bootstrap 5.3, Bootstrap Icons |
+| **Visualization** | Chart.js 4.4 (Polar Area, Line, Bar, Doughnut) |
+| **AI Logic** | Rule-based Sentiment, Content-based Filtering, User DNA Profiling |
+| **Database** | SQLite3 |
 
 ---
 
-## 6. URL chính
-
-| URL | Chức năng |
-|-----|------------|
-| `/` | Trang chủ |
-| `/books/` | Tất cả sách (tìm, lọc, sắp xếp, phân trang) |
-| `/books/<id>/` | Chi tiết sách |
-| `/categories/` | Danh sách thể loại |
-| `/categories/<id>/` | Sách theo thể loại |
-| `/register/`, `/login/`, `/logout/` | Đăng ký, đăng nhập, đăng xuất |
-| `/cart/` | Giỏ hàng |
-| `/cart/add/<book_id>/` | Thêm vào giỏ |
-| `/cart/checkout/` | Thanh toán (đặt hàng) |
-| `/orders/` | Đơn hàng của tôi |
-| `/wishlist/` | Danh sách yêu thích |
-| `/wishlist/add/<book_id>/`, `/wishlist/remove/<book_id>/` | Thêm/bỏ yêu thích |
-| `/profile/`, `/profile/edit/` | Tài khoản, chỉnh sửa |
-| `/rate/<book_id>/` | Gửi/sửa đánh giá |
-| `/about/`, `/contact/` | Giới thiệu, liên hệ |
-| `/admin/` | Django Admin |
-
----
-
-## 7. Cách chạy project
-
-### Yêu cầu
-
-- Python 3.10+
-- Django 6.x (`pip install django`)
-- MySQL (hoặc đổi lại SQLite trong `settings.py`)
-
-### Các bước
+## 5. Hướng dẫn cài đặt & Chạy nhanh
 
 ```bash
-# 1. Vào thư mục project
-cd Project
+# 1. Cài đặt Django
+pip install django
 
-# 2. Tạo database và áp dụng migrations
+# 2. Migrate Database
 python manage.py migrate
 
-# 3. (Khuyến nghị) Thêm sách mẫu từ Open Library API
-python manage.py seed_books
-# Tùy chọn: python manage.py seed_books --limit 24 --subjects fiction,programming,science
+# 3. Seed dữ liệu mẫu (Sách & Thể loại thực tế)
+python manage.py seed_books --limit 50 --subjects fiction,programming,business
 
-# 4. (Tùy chọn) Tạo tài khoản admin
+# 4. Tạo tài khoản Admin (Để vào Dashboard)
 python manage.py createsuperuser
 
-# 5. Chạy server
+# 5. Khởi động server
 python manage.py runserver
 ```
 
-Mở trình duyệt: **http://127.0.0.1:8000/**
-
-- Lệnh **seed_books** lấy dữ liệu từ [Open Library](https://openlibrary.org) (API công khai), tạo thể loại và sách kèm ảnh bìa, giá mẫu.
-- Có thể thêm/sửa **Category**, **Book** qua **http://127.0.0.1:8000/admin/** (sau khi tạo superuser).
+Truy cập: `http://127.0.0.1:8000/`
 
 ---
 
-## 8. Phần AI trong báo cáo
+## 6. AI Features trong báo cáo
 
-Hệ thống gợi ý sử dụng:
-
-1. **Content-based:** Gợi ý theo thể loại sách user đã mua/đánh giá cao.
-2. **Thống kê:** Sách bán chạy (số lượng bán), sách đánh giá cao (rating trung bình).
-3. **Quan hệ nội dung:** Sách cùng thể loại, cùng tác giả.
-
-Code gợi ý nằm trong `books/views.py`: `_get_popular_books`, `_get_top_rated_books`, `_get_recommended_for_user`, và phần “sách tương tự” / “cùng tác giả” trong `book_detail`.
+1. **Phân tích cảm xúc:** Sử dụng thuật toán so khớp từ khóa (Rule-based) hỗ trợ song ngữ (Việt - Anh) để gán nhãn sentiment cho review.
+2. **Gợi ý dựa trên nội dung:** Xây dựng Profile người dùng từ dữ liệu mua sắm thực tế để gợi ý những sản phẩm có tương quan cao nhất.
+3. **Reading DNA Mapping:** Thuật toán phân loại người dùng vào các nhóm tính cách đọc sách dựa trên trọng số của các thể loại đã tương tác.
 
 ---
 
-## 9. Tác giả / Nhóm
-
-- Đề tài: **Website gợi ý sản phẩm thông minh** (Smart Bookstore)  
-- Môn: Python  
-- Số nhóm: 13 (theo đăng ký đề tài)
-
----
-
-*Tài liệu tổng hợp cho project Smart Bookstore — Django + AI gợi ý.*
+*Dự án được thực hiện cho mục đích học tập môn Lập trình Python — Nhóm 13.*

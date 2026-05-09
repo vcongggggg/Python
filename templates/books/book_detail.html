@@ -15,13 +15,13 @@
 <div class="white-panel mb-4 fade-up">
     <div class="row g-4">
         <div class="col-md-4">
-            <div class="book-cover-frame" style="position:relative">
+            <div class="book-cover-frame shadow-sm" style="position:relative; background:rgba(45,42,38,.03); border-radius:var(--radius); overflow:hidden; display:flex; align-items:center; justify-content:center; min-height:320px; height: clamp(320px, 50vh, 480px)">
                 {% if book.cover_image %}
-                <img src="{{ book.cover_image }}" alt="{{ book.title }}" class="img-fluid w-100 book-cover-image">
+                <img src="{{ book.cover_image }}" alt="{{ book.title }}" class="img-fluid book-cover-image" style="max-height:100%; object-fit:contain; padding:20px">
                 {% else %}
-                <div class="d-flex align-items-center justify-content-center" style="height:380px;background:linear-gradient(135deg,#DFE6E9,#F0F2F5);border-radius:var(--radius);font-size:5rem">📖</div>
+                <div class="d-flex align-items-center justify-content-center w-100" style="height:100%; font-size:5rem">📖</div>
                 {% endif %}
-                {% if not book.in_stock %}<span class="stock-badge stock-out" style="position:absolute;top:12px;right:12px">Hết hàng</span>{% endif %}
+                {% if not book.in_stock %}<span class="stock-badge stock-out" style="position:absolute;top:12px;right:12px;z-index:10">Hết hàng</span>{% endif %}
             </div>
         </div>
         <div class="col-md-8">
@@ -57,7 +57,7 @@
             <p class="book-description">{{ book.description|default:"Chưa có mô tả." }}</p>
             <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
                 {% if book.in_stock %}
-                <form action="{% url 'add_to_cart' book.pk %}" method="post" class="d-flex align-items-center gap-2">
+                <form action="{% url 'add_to_cart' book.pk %}" method="post" class="d-flex align-items-center gap-2 ajax-form">
                     {% csrf_token %}
                     <input type="number" name="quantity" value="1" min="1" max="{{ book.stock }}" class="form-control" style="width:80px;border-radius:var(--radius-sm)">
                     <button type="submit" class="btn btn-gradient">
@@ -239,7 +239,25 @@
             </div>
             <div class="card-body py-2 px-3">
                 <h6 class="card-title" style="font-size:.85rem"><a href="{% url 'book_detail' s.pk %}">{{ s.title|truncatewords:6 }}</a></h6>
-                <span class="price" style="font-size:.85rem">{{ s.price|floatformat:0 }}₫</span>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="price" style="font-size:.85rem">{{ s.price|floatformat:0 }}₫</span>
+                    <div class="d-flex gap-1">
+                        {% if user.is_authenticated %}
+                            {% if s.pk in wishlist_book_ids %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist active" data-book-id="{{ s.pk }}" data-action="remove" title="Bỏ yêu thích" style="width:30px;height:30px;font-size:.8rem">
+                                <i class="bi bi-heart-fill"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist" data-book-id="{{ s.pk }}" data-action="add" title="Yêu thích" style="width:30px;height:30px;font-size:.8rem">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                        <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ s.pk }}" title="Thêm giỏ" style="width:30px;height:30px;font-size:.8rem">
+                            <i class="bi bi-bag-plus"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -269,7 +287,25 @@
             </div>
             <div class="card-body">
                 <h6 class="card-title"><a href="{% url 'book_detail' s.pk %}">{{ s.title|truncatewords:6 }}</a></h6>
-                <span class="price">{{ s.price|floatformat:0 }}₫</span>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="price">{{ s.price|floatformat:0 }}₫</span>
+                    <div class="d-flex gap-1">
+                        {% if user.is_authenticated %}
+                            {% if s.pk in wishlist_book_ids %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist active" data-book-id="{{ s.pk }}" data-action="remove" title="Bỏ yêu thích">
+                                <i class="bi bi-heart-fill"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist" data-book-id="{{ s.pk }}" data-action="add" title="Yêu thích">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                        <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ s.pk }}" title="Thêm giỏ">
+                            <i class="bi bi-bag-plus"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -300,7 +336,25 @@
             <div class="card-body">
                 <h6 class="card-title"><a href="{% url 'book_detail' s.pk %}">{{ s.title|truncatewords:6 }}</a></h6>
                 <p class="author small mb-0">{{ s.author }}</p>
-                <span class="price" style="font-size:.9rem">{{ s.price|floatformat:0 }}₫</span>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="price" style="font-size:.9rem">{{ s.price|floatformat:0 }}₫</span>
+                    <div class="d-flex gap-1">
+                        {% if user.is_authenticated %}
+                            {% if s.pk in wishlist_book_ids %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist active" data-book-id="{{ s.pk }}" data-action="remove" title="Bỏ yêu thích">
+                                <i class="bi bi-heart-fill"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist" data-book-id="{{ s.pk }}" data-action="add" title="Yêu thích">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                        <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ s.pk }}" title="Thêm giỏ">
+                            <i class="bi bi-bag-plus"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

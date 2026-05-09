@@ -14,6 +14,7 @@ urlpatterns = [
     path("cart/update/", views.update_cart, name="update_cart"),
     path("cart/remove/<int:book_id>/", views.remove_from_cart, name="remove_from_cart"),
     path("checkout/", views.checkout, name="checkout"),
+    path("api/v1/coupon/apply/", views.api_apply_coupon, name="api_apply_coupon"),
     path("orders/", views.order_list, name="order_list"),
     path("orders/<int:pk>/", views.order_detail, name="order_detail"),
     path("orders/<int:pk>/cancel/", views.cancel_order, name="cancel_order"),
@@ -30,6 +31,7 @@ urlpatterns = [
     path("dashboard/", views.dashboard, name="dashboard"),
     path("dashboard/export/orders/", views.export_orders_csv, name="export_orders_csv"),
     path("dashboard/export/books/", views.export_books_csv, name="export_books_csv"),
+    path("dashboard/order/<int:pk>/status/", views.api_update_order_status, name="api_update_order_status"),
     # REST API
     path("api/search/", views.api_search, name="api_search"),
     path("api/v1/books/", views.api_books, name="api_books"),

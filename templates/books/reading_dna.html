@@ -98,6 +98,28 @@
 </div>
 {% endif %}
 
+<!-- Reading Milestones -->
+{% if milestones %}
+<div class="white-panel mb-4 fade-up">
+    <h5 class="fw-bold mb-3"><i class="bi bi-award me-2" style="color:var(--primary)"></i>Thành tựu đạt được</h5>
+    <div class="row g-3">
+        {% for m in milestones %}
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center gap-3 p-3" style="background:var(--bg-body);border-radius:var(--radius-md);border:1px solid var(--border)">
+                <div style="width:48px;height:48px;border-radius:12px;background:{{ m.color }}22;color:{{ m.color }};display:flex;align-items:center;justify-content:center;font-size:1.5rem">
+                    <i class="bi {{ m.icon }}"></i>
+                </div>
+                <div>
+                    <div class="fw-bold" style="font-size:.9rem">{{ m.name }}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted)">{{ m.desc }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Favorite Authors -->
 {% if dna.favorite_authors %}
 <div class="white-panel mb-4 fade-up">

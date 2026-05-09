@@ -202,8 +202,12 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 4px rgba(192,86,33,.12);
             outline: none;
-            width: 220px;
+            width: 260px;
         }
+@media (max-width: 991.98px) {
+    .search-wrapper { width: 100%; margin-bottom: 1rem; }
+    .search-wrapper input { width: 100% !important; }
+}
         .search-wrapper .search-icon {
             position: absolute;
             left: 12px;
@@ -297,16 +301,21 @@
             box-shadow: var(--shadow-hover);
         }
         .card-book .card-img-top {
-            height: 240px;
-            object-fit: cover;
-            background: linear-gradient(135deg, #DFE6E9, #F0F2F5);
-            transition: transform .6s ease, filter .6s ease;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Changed from cover to show full book */
+            padding: 10px;
+            transition: transform .6s ease;
         }
         .card-book:hover .card-img-top {
-            transform: scale(1.06);
-            filter: saturate(1.05) contrast(1.02);
+            transform: scale(1.04);
         }
         .card-book .img-wrapper {
+            height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(45,42,38,.03); /* Light background for 'contain' look */
             overflow: hidden;
             border-radius: var(--radius) var(--radius) 0 0;
             position: relative;
@@ -1120,58 +1129,70 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="{% url 'home' %}"><i class="bi bi-house me-1"></i>Trang chủ</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'book_list' %}"><i class="bi bi-grid me-1"></i>Tất cả sách</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'category_list' %}"><i class="bi bi-tag me-1"></i>Thể loại</a></li>
+            <!-- Nav links centered -->
+            <ul class="navbar-nav mx-auto gap-lg-1">
+                <li class="nav-item"><a class="nav-link px-2" href="{% url 'home' %}"><i class="bi bi-house me-1"></i>Trang chủ</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="{% url 'book_list' %}"><i class="bi bi-grid me-1"></i>Sách</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="{% url 'category_list' %}"><i class="bi bi-tag me-1"></i>Thể loại</a></li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'cart' %}">
+                    <a class="nav-link px-2" href="{% url 'cart' %}">
                         <i class="bi bi-bag me-1"></i>Giỏ hàng
                         <span class="badge" id="cart-badge" {% if not cart_count %}style="display:none"{% endif %}>{{ cart_count }}</span>
                     </a>
                 </li>
-                {% if user.is_authenticated %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'order_list' %}"><i class="bi bi-receipt me-1"></i>Đơn hàng</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'wishlist' %}"><i class="bi bi-heart me-1"></i>Yêu thích</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'reading_dna' %}" style="color:var(--accent) !important"><i class="bi bi-fingerprint me-1"></i>Reading DNA</a></li>
-                {% endif %}
-                {% if user.is_staff %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}" style="color:var(--success) !important"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
-                {% endif %}
-            </ul>
-            <div class="search-wrapper me-3">
-                <i class="bi bi-search search-icon"></i>
-                <input type="text" id="live-search" placeholder="Tìm sách, tác giả..." autocomplete="off">
-                <div class="live-search-results" id="search-results"></div>
-            </div>
-            <ul class="navbar-nav align-items-center gap-2">
-                {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <button id="theme-toggle" class="btn btn-glass btn-sm me-2" title="Đổi giao diện">
+                    <a class="nav-link px-2" href="{% url 'wishlist' %}">
+                        <i class="bi bi-heart me-1"></i>Yêu thích
+                        <span class="badge" id="wishlist-badge" {% if not wishlist_count %}style="display:none"{% endif %}>{{ wishlist_count }}</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+                <div class="search-wrapper" style="min-width: 180px;">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" id="live-search" placeholder="Tìm sách..." autocomplete="off" style="width: 100%;">
+                    <div class="live-search-results" id="search-results"></div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <button id="theme-toggle" class="btn btn-icon btn-glass" title="Giao diện">
                         <i class="bi bi-moon-stars" id="theme-icon"></i>
                     </button>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'profile' %}"><i class="bi bi-person-circle me-1"></i>{{ user.username }}</a>
-                </li>
-                <li class="nav-item">
-                    <form method="post" action="{% url 'logout' %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-glass btn-sm">
-                            <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
-                        </button>
-                    </form>
-                </li>
+                </div>
+
+                {% if user.is_authenticated %}
+                <div class="dropdown">
+                    <button class="btn btn-glass dropdown-toggle d-flex align-items-center gap-2 py-2 border-0" type="button" data-bs-toggle="dropdown">
+                        <div style="width:24px;height:24px;border-radius:50%;background:var(--gradient-1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:700">
+                            {{ user.username|first|upper }}
+                        </div>
+                        <span class="d-none d-sm-inline">{{ user.username }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2 mt-2" style="border-radius:var(--radius-sm);min-width:200px">
+                        <li><a class="dropdown-item rounded-2 py-2" href="{% url 'profile' %}"><i class="bi bi-person-circle me-2"></i>Tài khoản</a></li>
+                        <li><a class="dropdown-item rounded-2 py-2" href="{% url 'reading_dna' %}"><i class="bi bi-fingerprint me-2" style="color:var(--accent)"></i>Reading DNA</a></li>
+                        <li><a class="dropdown-item rounded-2 py-2" href="{% url 'order_list' %}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                        {% if user.is_staff %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item rounded-2 py-2" href="{% url 'dashboard' %}"><i class="bi bi-speedometer2 me-2" style="color:var(--success)"></i>Dashboard</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="{% url 'logout' %}" method="post" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item rounded-2 py-2 text-danger border-0 w-100 text-start bg-transparent"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
                 {% else %}
-                <li class="nav-item">
-                    <button id="theme-toggle" class="btn btn-glass btn-sm me-2" title="Đổi giao diện">
-                        <i class="bi bi-moon-stars" id="theme-icon"></i>
-                    </button>
-                </li>
-                <li class="nav-item"><a href="{% url 'login' %}" class="btn btn-auth-outline btn-sm">Đăng nhập</a></li>
-                <li class="nav-item"><a href="{% url 'register' %}" class="btn btn-auth btn-sm">Đăng ký</a></li>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'login' %}" class="btn btn-auth-outline btn-sm px-3">Đăng nhập</a>
+                    <a href="{% url 'register' %}" class="btn btn-auth btn-sm px-3">Đăng ký</a>
+                </div>
                 {% endif %}
-            </ul>
+            </div>
         </div>
     </div>
 </nav>
@@ -1343,6 +1364,14 @@
         }
     }
 
+    function updateWishlistBadge(count) {
+        const badge = document.getElementById('wishlist-badge');
+        if (badge) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+    }
+
     // ───── Live Search ─────
     const searchInput = document.getElementById('live-search');
     const searchResults = document.getElementById('search-results');
@@ -1383,18 +1412,20 @@
 
     // ───── AJAX Handlers ─────
     document.addEventListener('click', function (e) {
-        // Add to Cart
+        // Add to Cart (Quick button)
         const cartBtn = e.target.closest('.ajax-add-cart');
         if (cartBtn) {
             e.preventDefault();
             const bookId = cartBtn.dataset.bookId;
+            const quantity = cartBtn.dataset.quantity || 1;
+            
             fetch(`/cart/add/${bookId}/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken'),
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: new URLSearchParams({ quantity: 1 }),
+                body: new URLSearchParams({ quantity: quantity }),
             })
             .then(r => r.json())
             .then(data => {
@@ -1426,7 +1457,26 @@
             .then(data => {
                 if (data.status === 'ok' || data.status === 'success') {
                     showToast(data.message);
+                    if (data.wishlist_count !== undefined) updateWishlistBadge(data.wishlist_count);
+                    
                     const isAdded = data.action === 'added' || action === 'add';
+                    
+                    // Specific handling for wishlist page
+                    if (data.action === 'removed' && window.location.pathname.includes('/wishlist/')) {
+                        const itemCard = favBtn.closest('.wishlist-item-container');
+                        if (itemCard) {
+                            itemCard.style.opacity = '0';
+                            itemCard.style.transform = 'scale(0.9)';
+                            setTimeout(() => {
+                                itemCard.remove();
+                                if (document.querySelectorAll('.wishlist-item-container').length === 0) {
+                                    location.reload(); // Show empty state
+                                }
+                            }, 300);
+                            return;
+                        }
+                    }
+
                     if (isAdded && data.action !== 'removed') {
                         favBtn.dataset.action = 'remove';
                         favBtn.classList.add('active');
@@ -1436,6 +1486,34 @@
                         favBtn.classList.remove('active');
                         favBtn.innerHTML = '<i class="bi bi-heart"></i>';
                     }
+                }
+            })
+            .catch(() => showToast('Có lỗi xảy ra!', 'error'));
+        }
+    });
+
+    // Handle AJAX for forms with ajax-form class
+    document.addEventListener('submit', function(e) {
+        const form = e.target.closest('.ajax-form');
+        if (form) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: new URLSearchParams(formData),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok' || data.status === 'success') {
+                    showToast(data.message || 'Thành công');
+                    if (data.cart_count !== undefined) updateCartBadge(data.cart_count);
+                    if (data.wishlist_count !== undefined) updateWishlistBadge(data.wishlist_count);
+                } else {
+                    showToast(data.message || 'Có lỗi xảy ra', 'error');
                 }
             })
             .catch(() => showToast('Có lỗi xảy ra!', 'error'));
@@ -1459,12 +1537,6 @@
         const chatWindow = document.getElementById('chatWindow');
         const typingIndicator = document.getElementById('typingIndicator');
 
-        window.toggleChat = function() {
-            chatWindow.classList.toggle('show');
-            if (chatWindow.classList.contains('show')) {
-                chatInput.focus();
-            }
-        };
 
         window.handleChatKey = function(e) {
             if (e.key === 'Enter') sendChatMessage();
@@ -1622,6 +1694,62 @@
             chatBody.scrollTop = chatBody.scrollHeight;
             return msgDiv;
         }
+
+    // ───── Draggable Chatbot ─────
+    const chatWidget = document.getElementById('chatWidget');
+    const chatBubble = document.getElementById('chatBubble');
+    let isDragging = false;
+    let startX, startY, initialRight, initialBottom;
+    let dragThreshold = 5;
+    let hasMoved = false;
+
+    chatBubble.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        hasMoved = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        // Get current computed style to handle initial position
+        const style = window.getComputedStyle(chatWidget);
+        initialRight = parseInt(style.right);
+        initialBottom = parseInt(style.bottom);
+        
+        chatWidget.style.transition = 'none';
+        chatBubble.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const deltaX = startX - e.clientX;
+        const deltaY = startY - e.clientY;
+        
+        if (Math.abs(deltaX) > dragThreshold || Math.abs(deltaY) > dragThreshold) {
+            hasMoved = true;
+        }
+
+        if (hasMoved) {
+            chatWidget.style.right = (initialRight + deltaX) + 'px';
+            chatWidget.style.bottom = (initialBottom + deltaY) + 'px';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        chatWidget.style.transition = '';
+        chatBubble.style.cursor = 'pointer';
+    });
+
+    // Modified toggleChat to check for drag
+    window.toggleChat = function() {
+        if (hasMoved) return; // Don't toggle if we just finished a drag
+        chatWindow.classList.toggle('show');
+        if (chatWindow.classList.contains('show')) {
+            chatInput.focus();
+        }
+    };
 
     // Proactive greeting
     setTimeout(() => {

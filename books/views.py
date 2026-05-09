@@ -521,13 +521,14 @@ def checkout(request):
         return redirect("cart")
 
     subtotal = sum(x["subtotal"] for x in items)
-    discount_amount = 0
-    applied_coupon = None
-
+    
     if request.method == "POST":
         form = CheckoutForm(request.POST)
         if form.is_valid():
             coupon_code = form.cleaned_data.get("coupon_code", "").strip()
+            discount_amount = 0
+            applied_coupon = None
+            
             if coupon_code:
                 try:
                     coupon = Coupon.objects.get(code__iexact=coupon_code)
@@ -536,15 +537,11 @@ def checkout(request):
                         final_total = coupon.apply_discount(subtotal)
                         discount_amount = subtotal - final_total
                     else:
-                        messages.warning(request, "Mã giảm giá không hợp lệ hoặc đơn hàng chưa đạt giá trị tối thiểu.")
-                        return render(request, "books/checkout.html", {
-                            "form": form, "cart_items": items, "cart_total": subtotal
-                        })
+                        messages.warning(request, "Mã giảm giá không hợp lệ hoặc không đủ điều kiện.")
+                        # Proceed without coupon if invalid during final submission? 
+                        # Usually better to error out if they intended to use it.
                 except Coupon.DoesNotExist:
                     messages.warning(request, "Mã giảm giá không tồn tại.")
-                    return render(request, "books/checkout.html", {
-                        "form": form, "cart_items": items, "cart_total": subtotal
-                    })
 
             order = Order.objects.create(
                 user=request.user,
@@ -584,6 +581,38 @@ def checkout(request):
 
 
 @login_required
+@require_POST
+def api_apply_coupon(request):
+    """AJAX API to validate and calculate coupon discount."""
+    coupon_code = request.POST.get("code", "").strip()
+    subtotal = float(request.POST.get("subtotal", 0))
+    
+    try:
+        coupon = Coupon.objects.get(code__iexact=coupon_code)
+        if not coupon.is_valid:
+            return JsonResponse({"status": "error", "message": "Mã giảm giá đã hết hạn hoặc hết lượt dùng."})
+        
+        if subtotal < float(coupon.min_order_amount):
+            return JsonResponse({
+                "status": "error", 
+                "message": f"Đơn hàng tối thiểu {coupon.min_order_amount:,.0f}₫ để dùng mã này."
+            })
+            
+        final_total = float(coupon.apply_discount(subtotal))
+        discount = subtotal - final_total
+        
+        return JsonResponse({
+            "status": "ok",
+            "message": f"Áp dụng thành công: {coupon}",
+            "discount": discount,
+            "final_total": final_total,
+            "coupon_code": coupon.code
+        })
+    except Coupon.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Mã giảm giá không tồn tại."})
+
+
+@login_required
 def order_list(request):
     orders = request.user.orders.prefetch_related("items__book").order_by("-created_at")
     return render(request, "books/order_list.html", {"orders": orders})
@@ -604,8 +633,14 @@ def order_detail(request, pk: int):
 def wishlist_add(request, book_id: int):
     book = get_object_or_404(Book, pk=book_id)
     _, created = Wishlist.objects.get_or_create(user=request.user, book=book)
+    wishlist_count = request.user.wishlist_items.count()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return JsonResponse({"status": "ok", "action": "added", "message": f"Đã thêm '{book.title}' vào yêu thích."})
+        return JsonResponse({
+            "status": "ok", 
+            "action": "added", 
+            "message": f"Đã thêm '{book.title}' vào yêu thích.",
+            "wishlist_count": wishlist_count
+        })
     messages.success(request, f"Đã thêm '{book.title}' vào danh sách yêu thích.")
     next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or "book_detail"
     if "book_detail" in str(next_url) or not next_url:
@@ -617,8 +652,14 @@ def wishlist_add(request, book_id: int):
 def wishlist_remove(request, book_id: int):
     book = get_object_or_404(Book, pk=book_id)
     Wishlist.objects.filter(user=request.user, book=book).delete()
+    wishlist_count = request.user.wishlist_items.count()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return JsonResponse({"status": "ok", "action": "removed", "message": f"Đã bỏ '{book.title}' khỏi yêu thích."})
+        return JsonResponse({
+            "status": "ok", 
+            "action": "removed", 
+            "message": f"Đã bỏ '{book.title}' khỏi yêu thích.",
+            "wishlist_count": wishlist_count
+        })
     messages.info(request, "Đã bỏ khỏi danh sách yêu thích.")
     next_url = request.GET.get("next") or request.META.get("HTTP_REFERER")
     if next_url and "wishlist" in next_url:
@@ -642,11 +683,16 @@ def profile(request):
     order_count = request.user.orders.count()
     wishlist_count = request.user.wishlist_items.count()
     rating_count = request.user.ratings.count()
+    
+    dna = _get_user_reading_dna(request.user)
+    milestones = dna.get("milestones", []) if dna else []
+    
     context = {
         "profile_user": request.user,
         "order_count": order_count,
         "wishlist_count": wishlist_count,
         "rating_count": rating_count,
+        "milestones": milestones[:3],  # Show top 3 on profile
     }
     return render(request, "books/profile.html", context)
 
@@ -871,7 +917,41 @@ def _get_user_reading_dna(user):
     else:
         dna["reading_mood"] = "Newcomer"
 
+    dna["milestones"] = _get_user_milestones(user, dna)
     return dna
+
+
+def _get_user_milestones(user, dna):
+    """Define and calculate reading milestones/achievements."""
+    milestones = []
+    
+    # 1. Quantity milestones
+    total_books = dna.get("total_books_bought", 0)
+    if total_books >= 50:
+        milestones.append({"id": "collector", "name": "Đại tuyển thủ", "desc": "Sở hữu trên 50 cuốn sách", "icon": "bi-trophy-fill", "color": "#FFD700"})
+    elif total_books >= 20:
+        milestones.append({"id": "bibliophile", "name": "Mọt sách chính hiệu", "desc": "Sở hữu trên 20 cuốn sách", "icon": "bi-book-fill", "color": "#C0C0C0"})
+    elif total_books >= 5:
+        milestones.append({"id": "reader", "name": "Người đọc triển vọng", "desc": "Bắt đầu xây dựng thư viện cá nhân", "icon": "bi-bookmark-star", "color": "#CD7F32"})
+
+    # 2. Diversity milestones
+    unique_cats = len(dna.get("categories", []))
+    if unique_cats >= 5:
+        milestones.append({"id": "polymath", "name": "Bác học đa tài", "desc": "Đọc trên 5 thể loại khác nhau", "icon": "bi-mortarboard-fill", "color": "#6C5CE7"})
+    elif unique_cats >= 3:
+        milestones.append({"id": "explorer", "name": "Người khám phá", "desc": "Thích trải nghiệm nhiều thể loại", "icon": "bi-compass-fill", "color": "#00B894"})
+
+    # 3. Critic milestones
+    total_ratings = dna.get("total_ratings", 0)
+    if total_ratings >= 10:
+        milestones.append({"id": "critic", "name": "Nhà phê bình ưu tú", "desc": "Đóng góp trên 10 đánh giá chất lượng", "icon": "bi-megaphone-fill", "color": "#FD79A8"})
+    
+    # 4. Big spender
+    total_spent = dna.get("total_spent", 0)
+    if total_spent >= 2000000:
+        milestones.append({"id": "patron", "name": "Nhà bảo trợ tri thức", "desc": "Đầu tư mạnh tay cho việc đọc", "icon": "bi-gem", "color": "#0984E3"})
+
+    return milestones
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1057,6 +1137,7 @@ def dashboard(request):
         "recent_orders": recent_orders,
         "rating_dist": rating_dist,
         "low_stock": low_stock,
+        "order_statuses": Order.STATUS_CHOICES,
     }
     return render(request, "books/dashboard.html", context)
 
@@ -1106,6 +1187,18 @@ def export_books_csv(request):
             (book.description or "")[:200],
         ])
     return response
+
+
+@staff_member_required
+@require_POST
+def api_update_order_status(request, pk: int):
+    order = get_object_or_404(Order, pk=pk)
+    new_status = request.POST.get("status")
+    if new_status in dict(Order.STATUS_CHOICES):
+        order.status = new_status
+        order.save(update_fields=["status"])
+        return JsonResponse({"status": "ok", "message": f"Đã cập nhật đơn hàng #{order.pk} sang {order.status_display_vi}."})
+    return JsonResponse({"status": "error", "message": "Trạng thái không hợp lệ."}, status=400)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1222,9 +1315,11 @@ def reading_dna(request):
     """User's Reading DNA page — AI-analyzed reading preferences."""
     dna = _get_user_reading_dna(request.user)
     recommendations = _get_explainable_recommendations(request.user)
+    
     context = {
         "dna": dna,
         "recommendations": recommendations,
+        "milestones": dna.get("milestones", []) if dna else [],
     }
     return render(request, "books/reading_dna.html", context)
 

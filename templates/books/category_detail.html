@@ -42,7 +42,22 @@
                 <p class="author mb-1">{{ book.author }}</p>
                 <div class="d-flex align-items-center justify-content-between">
                     <span class="price">{{ book.price|floatformat:0 }}₫</span>
-                    <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ book.pk }}"><i class="bi bi-bag-plus"></i></button>
+                    <div class="d-flex gap-1">
+                        {% if user.is_authenticated %}
+                            {% if book.pk in wishlist_book_ids %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist active" data-book-id="{{ book.pk }}" data-action="remove" title="Bỏ yêu thích">
+                                <i class="bi bi-heart-fill"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn-icon btn-icon-heart ajax-wishlist" data-book-id="{{ book.pk }}" data-action="add" title="Yêu thích">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                        <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ book.pk }}" title="Thêm giỏ">
+                            <i class="bi bi-bag-plus"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -7,14 +7,14 @@
 {% if wishlist_items %}
 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
     {% for item in wishlist_items %}
-    <div class="col fade-up">
+    <div class="col fade-up wishlist-item-container" style="transition: all 0.3s ease;">
         <div class="card card-book h-100">
             <div class="img-wrapper">
                 <a href="{% url 'book_detail' item.book.pk %}">
                     {% if item.book.cover_image %}
                     <img src="{{ item.book.cover_image }}" class="card-img-top" alt="{{ item.book.title }}">
                     {% else %}
-                    <div class="card-img-top d-flex align-items-center justify-content-center" style="font-size:3rem;color:var(--text-muted)">📖</div>
+                    <div class="card-img-top d-flex align-items-center justify-content-center" style="height:180px;font-size:3rem;color:var(--text-muted)">📖</div>
                     {% endif %}
                 </a>
             </div>
@@ -27,12 +27,9 @@
                         <button class="btn-icon btn-icon-cart ajax-add-cart" data-book-id="{{ item.book.pk }}" title="Thêm giỏ">
                             <i class="bi bi-bag-plus"></i>
                         </button>
-                        <form action="{% url 'wishlist_remove' item.book.pk %}?next={% url 'wishlist' %}" method="post" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-icon" style="color:var(--danger);background:rgba(225,112,85,.1)" title="Bỏ yêu thích">
-                                <i class="bi bi-heart-break"></i>
-                            </button>
-                        </form>
+                        <button class="btn-icon ajax-wishlist" data-book-id="{{ item.book.pk }}" data-action="remove" style="color:var(--danger);background:rgba(225,112,85,.1)" title="Bỏ yêu thích">
+                            <i class="bi bi-heart-break"></i>
+                        </button>
                     </div>
                 </div>
             </div>
