@@ -260,22 +260,27 @@ def _books_queryset(search=None, category_id=None, sort="title"):
 def home(request):
     """Trang chủ: hiển thị các danh mục sách khác nhau dưới dạng Slider."""
     books = Book.objects.all().order_by("-created_at")[:12]
-    popular_books = _get_popular_books(15)
+    featured_books = _get_popular_books(15)
     top_rated_books = _get_top_rated_books(15)
     recommended_books = None
     if request.user.is_authenticated:
         recommended_books = _get_explainable_recommendations(request.user, limit=12)
     recently_viewed = _recently_viewed_books(request)
     total_books = Book.objects.count()
-    total_categories = Category.objects.count()
+    categories = Category.objects.annotate(book_count=Count("books")).order_by("name")
+    
+    # Get some featured reviews for section 6
+    recent_reviews = Rating.objects.select_related("user", "book").order_by("-created_at")[:10]
+    
     context = {
         "books": books,
-        "popular_books": popular_books,
+        "featured_books": featured_books,
         "top_rated_books": top_rated_books,
         "recommended_books": recommended_books,
         "recently_viewed": recently_viewed,
         "total_books": total_books,
-        "total_categories": total_categories,
+        "categories": categories,
+        "recent_reviews": recent_reviews,
     }
     return render(request, "books/home.html", context)
 

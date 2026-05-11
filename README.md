@@ -1,103 +1,110 @@
-# Smart Bookstore — Hệ thống gợi ý sách thông minh (Phase 2 Enhanced)
+# Bookie — Midnight Cosmic Library ✦
 
-Đề tài môn Python: **Website bán sách trực tuyến** tích hợp AI (Content-based Recommendation, Sentiment Analysis & User Profiling).
-
----
-
-## 1. Tổng quan dự án
-
-Dự án đã hoàn thành **Phase 2** với các nâng cấp mạnh mẽ về trải nghiệm người dùng (UX), tính năng tương tác thời gian thực (AJAX) và ứng dụng AI chuyên sâu hơn.
-
-- **Công nghệ:** Django 6.x, SQLite, Bootstrap 5, Chart.js.
-- **Tính năng nổi bật:** Gợi ý sách thông minh, Phân tích cảm nhận người dùng (AI Sentiment), Reading DNA, và Quản lý đơn hàng thời gian thực.
+**Bookie** là hệ thống thương mại điện tử bán sách hiện đại, được tái định nghĩa với trải nghiệm **Midnight Cosmic** (Vũ trụ nửa đêm). Website tích hợp Trí tuệ nhân tạo (AI) để cá nhân hóa hành trình đọc sách, phân tích cảm xúc và mang đến một giao diện điện ảnh, cao cấp.
 
 ---
 
-## 2. Các chức năng mới (Phase 2 Update)
+## 1. Tầm nhìn dự án (Phase 3: Midnight Cosmic Redesign)
 
-### 2.1 Trải nghiệm người dùng (UX) & AJAX
-- **Real-time Wishlist & Cart:** Thêm/xóa sản phẩm khỏi yêu thích và giỏ hàng ngay lập tức mà không cần tải lại trang. Cập nhật Badge số lượng ở Navbar theo thời gian thực.
-- **Thanh toán thông minh:** Áp dụng mã giảm giá (Coupon) và xem trước số tiền được giảm bằng AJAX trước khi đặt hàng.
-- **Giao diện hiện đại:** Navbar được tái cấu trúc thông minh, hỗ trợ Dark Mode hoàn chỉnh, hình ảnh bìa sách hiển thị trọn vẹn (Aspect-ratio fix).
-
-### 2.2 AI & Dữ liệu chuyên sâu
-- **Reading DNA:** Phân tích phong cách đọc sách của người dùng (Explorer, Dreamer, Critic...) dựa trên lịch sử mua hàng và đánh giá.
-- **AI Sentiment Analysis:** Tự động phân tích sắc thái nhận xét của khách hàng (Tích cực, Tiêu cực, Trung lập) để tóm tắt chất lượng sách.
-- **Explainable Recommendations:** Gợi ý sách kèm lý do cụ thể (Ví dụ: "Vì bạn đã mua sách của tác giả X", "Cùng thể loại Y mà bạn yêu thích").
-- **Reading Milestones:** Hệ thống thành tựu (Gamification) tặng huy hiệu dựa trên hoạt động đọc sách (Đại tuyển thủ, Bác học đa tài, Nhà phê bình ưu tú...).
-
-### 2.3 Dashboard Quản lý (Dành cho Staff)
-- **Thống kê trực quan:** Biểu đồ doanh thu theo tháng, phân bổ thể loại và top sách bán chạy (sử dụng Chart.js).
-- **Quản lý đơn hàng AJAX:** Cập nhật trạng thái đơn hàng (Chờ xác nhận, Đang giao, Đã giao...) trực tiếp từ bảng thống kê.
-- **Báo cáo dữ liệu:** Xuất dữ liệu Sách và Đơn hàng ra file CSV (UTF-8-SIG hỗ trợ Excel).
-- **Cảnh báo tồn kho:** Tự động liệt kê các đầu sách sắp hết hàng (tồn kho < 10).
+Dự án đã trải qua đợt lột xác toàn diện về UI/UX để chuyển mình từ một nhà sách trực tuyến thông thường thành một **Thư viện số cao cấp**:
+- **Branding:** Tên thương hiệu mới **Bookie** với Logo tối giản phong cách Gold-on-Dark.
+- **Aesthetic:** Concept "Midnight Cosmic" sử dụng dải màu Aurora Mesh, các hạt tinh thể chuyển động và hiệu ứng kính mờ (Glassmorphism).
+- **Technology:** Tích hợp **GSAP (GreenSock)** cho các hiệu ứng cuộn trang mượt mà và ScrollTriggers sinh động.
 
 ---
 
-## 3. Cấu trúc Project (Cập nhật)
+## 2. Các tính năng đột phá (Core Features)
 
-```
-Project/
-├── bookstore/                 # Cấu hình dự án Django
-├── books/                     # App chính
-│   ├── context_processors.py  # Xử lý dữ liệu toàn cục (Cart, Wishlist, Reading DNA)
-│   ├── models.py              # Category, Book, Order, Rating, Wishlist, Coupon
-│   ├── views.py               # Chứa logic AI, AJAX API và Staff Dashboard
-│   ├── seed_books.py          # Lệnh import dữ liệu mẫu từ Open Library
-│   └── ...
-├── templates/
-│   ├── base.html              # Navbar (Redesigned), Footer, Theme Engine
-│   └── books/
-│       ├── dashboard.html     # Staff Dashboard với biểu đồ
-│       ├── reading_dna.html   # Trang phân tích AI cá nhân
-│       ├── checkout.html      # Trang thanh toán tích hợp AJAX Coupon
-│       └── ...
-└── static/                    # Assets, CSS, JS
-```
+### 2.1 Trải nghiệm người dùng (UX Design)
+- **Bento Grid Categories:** Hệ thống danh mục được sắp xếp theo bố cục Bento hiện đại, sử dụng hình ảnh minh họa 3D phong cách Abstract chuyên sâu.
+- **Infinite Cosmic Ticker:** Thanh chạy thông tin vô tận (Looping Marquee) ở Header, cung cấp các thông tin khuyến mãi và tính năng AI theo thời gian thực.
+- **AI Showcase:** Khu vực giới thiệu công nghệ AI với các thẻ tính năng (Content-based Filtering, Sentiment Analysis, Reading DNA) được thiết kế với Background AI-generated 3D nghệ thuật.
+- **Cinematic Book Cards:** Thẻ sách 3D với hiệu ứng Glare (phản chiếu ánh sáng) và tương tác vật lý khi di chuột.
+
+### 2.2 Trí tuệ nhân tạo (AI Engine)
+- **Content-based Filtering:** Gợi ý sách thông minh dựa trên "Dấu vân tay sở thích" của người dùng.
+- **Sentiment Analysis:** Phân tích cảm xúc nhận xét tự động (Tích cực/Tiêu cực) để xếp hạng chất lượng sách.
+- **Reading DNA:** Bản đồ hóa nhóm tính cách đọc sách (Explorer, Scholar, Critic...) qua đồ thị trực quan.
+- **Bookie Chatbot:** Trợ lý ảo AI có khả năng kéo thả, hỗ trợ giải đáp và tìm kiếm sách 24/7.
+
+### 2.3 Hệ thống nghiệp vụ chuyên nghiệp
+- **Thanh toán QR:** Hệ thống Mock Payment tích hợp tạo mã QR động cho Momo/VNPay.
+- **Dashboard Admin:** Quản lý doanh thu, đơn hàng và kho sách qua các biểu đồ trực quan (Chart.js).
+- **Real-time Interaction:** Toàn bộ hành động Thêm vào giỏ/Yêu thích đều sử dụng AJAX không tải lại trang.
 
 ---
 
-## 4. Công nghệ & Thư viện
+## 3. Stack Công nghệ (Technology Stack)
 
 | Thành phần | Công nghệ |
 | :--- | :--- |
-| **Backend** | Django 6.1 (Python 3.12) |
-| **Frontend UI** | Bootstrap 5.3, Bootstrap Icons |
-| **Visualization** | Chart.js 4.4 (Polar Area, Line, Bar, Doughnut) |
-| **AI Logic** | Rule-based Sentiment, Content-based Filtering, User DNA Profiling |
-| **Database** | SQLite3 |
+| **Core Backend** | Django 6.1 (Python 3.12) |
+| **Frontend Foundation** | HTML5, Vanilla JS (ES6+), CSS3 Variables |
+| **Animation Engine** | **GSAP (GreenSock)** + ScrollTrigger |
+| **UI Kit** | Custom CSS (Midnight System), Bootstrap Icons |
+| **Database** | SQLite3 (Cấu trúc quan hệ tối ưu) |
+| **Visual Assets** | AI-Generated 3D Illustrations |
 
 ---
 
-## 5. Hướng dẫn cài đặt & Chạy nhanh
+## 4. Hướng dẫn cài đặt nhanh
 
 ```bash
-# 1. Cài đặt Django
+# 1. Cài đặt môi trường
 pip install django
 
-# 2. Migrate Database
+# 2. Khởi tạo dữ liệu
+python manage.py makemigrations
 python manage.py migrate
 
-# 3. Seed dữ liệu mẫu (Sách & Thể loại thực tế)
-python manage.py seed_books --limit 50 --subjects fiction,programming,business
+# 3. Import dữ liệu sách mẫu (Chuyên sâu)
+python manage.py seed_books --limit 50
 
-# 4. Tạo tài khoản Admin (Để vào Dashboard)
-python manage.py createsuperuser
-
-# 5. Khởi động server
+# 4. Chạy server
 python manage.py runserver
 ```
 
-Truy cập: `http://127.0.0.1:8000/`
+---
+
+## 5. Thông tin thực hiện
+
+- **Dự án:** Bookie — Midnight Cosmic Bookstore
+- **Nhóm thực hiện:** Nhóm 13 (PBL Python)
+- **Trạng thái:** Hoàn thiện 100% (Gold Master Version)
+
+---
+*Giao diện Bookie được tối ưu hóa cho trải nghiệm cao cấp trên trình duyệt hiện đại.*
 
 ---
 
-## 6. AI Features trong báo cáo
+## 6. Hướng dẫn cài đặt
 
-1. **Phân tích cảm xúc:** Sử dụng thuật toán so khớp từ khóa (Rule-based) hỗ trợ song ngữ (Việt - Anh) để gán nhãn sentiment cho review.
-2. **Gợi ý dựa trên nội dung:** Xây dựng Profile người dùng từ dữ liệu mua sắm thực tế để gợi ý những sản phẩm có tương quan cao nhất.
-3. **Reading DNA Mapping:** Thuật toán phân loại người dùng vào các nhóm tính cách đọc sách dựa trên trọng số của các thể loại đã tương tác.
+```bash
+# 1. Cài đặt thư viện
+pip install django
+
+# 2. Khởi tạo Database
+python manage.py makemigrations
+python manage.py migrate
+
+# 3. Seed dữ liệu thực tế (Hàng chục đầu sách từ Open Library)
+python manage.py seed_books --limit 50
+
+# 4. Tạo quản trị viên
+python manage.py createsuperuser
+
+# 5. Khởi chạy
+python manage.py runserver
+```
 
 ---
 
-*Dự án được thực hiện cho mục đích học tập môn Lập trình Python — Nhóm 13.*
+## 7. Thông tin nhóm thực hiện
+
+- **Đề tài:** Website gợi ý sản phẩm thông minh (Smart Bookstore)
+- **Môn học:** Lập trình Python
+- **Nhóm:** 13
+- **Tính năng đặc biệt:** Mock Payment, Draggable AI Chatbot, Reading DNA, Sentiment Analysis.
+
+---
+*Dự án hoàn thiện 100% các yêu cầu về nghiệp vụ và tích hợp công nghệ AI.*
