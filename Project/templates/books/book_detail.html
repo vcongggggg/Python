@@ -55,33 +55,61 @@
             <div class="divider-line"></div>
             <h5 class="mb-2">Mô tả</h5>
             <p class="book-description">{{ book.description|default:"Chưa có mô tả." }}</p>
-            <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
-                {% if book.in_stock %}
-                <form action="{% url 'add_to_cart' book.pk %}" method="post" class="d-flex align-items-center gap-2 ajax-form">
-                    {% csrf_token %}
-                    <input type="number" name="quantity" value="1" min="1" max="{{ book.stock }}" class="form-control" style="width:80px;border-radius:var(--radius-sm)">
-                    <button type="submit" class="btn btn-gradient">
-                        <i class="bi bi-bag-plus me-1"></i>Thêm vào giỏ
-                    </button>
-                </form>
-                {% else %}
-                <button class="btn btn-gradient" disabled style="opacity:.5">Hết hàng</button>
-                {% endif %}
-                {% if user.is_authenticated %}
-                    {% if is_in_wishlist %}
-                    <button class="btn-icon btn-icon-heart active ajax-wishlist" data-book-id="{{ book.pk }}" data-action="remove" style="width:44px;height:44px;font-size:1.25rem">
-                        <i class="bi bi-heart-fill"></i>
-                    </button>
-                    {% else %}
-                    <button class="btn-icon btn-icon-heart ajax-wishlist" data-book-id="{{ book.pk }}" data-action="add" style="width:44px;height:44px;font-size:1.25rem">
-                        <i class="bi bi-heart"></i>
-                    </button>
+            
+            <div class="purchase-options mt-4">
+                <div class="d-flex flex-wrap gap-3 align-items-center">
+                    <!-- Nút mua sách giấy -->
+                    <div class="physical-buy-box">
+                        {% if book.in_stock %}
+                        <form action="{% url 'add_to_cart' book.pk %}" method="post" class="d-flex align-items-center gap-2 ajax-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="format" value="physical">
+                            <input type="number" name="quantity" value="1" min="1" max="{{ book.stock }}" class="form-control" style="width:70px;border-radius:var(--radius-sm)">
+                            <button type="submit" class="btn btn-gradient">
+                                <i class="bi bi-box-seam me-1"></i>Sách giấy
+                            </button>
+                        </form>
+                        {% else %}
+                        <button class="btn btn-gradient" disabled style="opacity:.5"><i class="bi bi-box-seam me-1"></i>Hết hàng</button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Nút mua E-book -->
+                    {% if book.is_digital %}
+                    <div class="digital-buy-box">
+                        <form action="{% url 'add_to_cart' book.pk %}" method="post" class="ajax-form m-0 p-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="format" value="digital">
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit" class="btn btn-outline-info">
+                                <i class="bi bi-cloud-download me-1"></i>Mua E-book
+                            </button>
+                        </form>
+                    </div>
+                    <!-- Nút đọc luôn (Dành cho sách miễn phí hoặc đã mua) -->
+                    <a href="{% url 'read_book' book.pk %}" class="btn btn-outline-light rounded-pill px-3">
+                        <i class="bi bi-book-half me-1"></i>Đọc thử
+                    </a>
                     {% endif %}
-                {% endif %}
+
+                    <!-- Wishlist -->
+                    {% if user.is_authenticated %}
+                        {% if is_in_wishlist %}
+                        <button class="btn-icon btn-icon-heart active ajax-wishlist ms-auto" data-book-id="{{ book.pk }}" data-action="remove" style="width:44px;height:44px;font-size:1.25rem">
+                            <i class="bi bi-heart-fill"></i>
+                        </button>
+                        {% else %}
+                        <button class="btn-icon btn-icon-heart ajax-wishlist ms-auto" data-book-id="{{ book.pk }}" data-action="add" style="width:44px;height:44px;font-size:1.25rem">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 
 <!-- Rating section -->
 {% if user.is_authenticated and rating_form %}

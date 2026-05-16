@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Quan ly nguoi dung - Smart Bookstore{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="fw-bold mb-1" style="font-size:1.6rem">
+            <i class="bi bi-people me-2" style="color:var(--primary)"></i>Quan ly nguoi dung
+        </h1>
+        <div class="text-muted" style="font-size:.9rem">Chi superuser moi co the thay doi quyen va khoa tai khoan.</div>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-glass btn-sm"><i class="bi bi-speedometer2 me-1"></i>Ve dashboard</a>
+</div>
+
+<form method="get" class="mb-3">
+    <div class="input-group" style="max-width:420px;">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control" placeholder="Tim username/email..." value="{{ query }}" />
+        <button class="btn btn-glass" type="submit">Tim</button>
+    </div>
+</form>
+
+<div class="white-panel">
+    <div class="table-responsive">
+        <table class="table table-sm mb-0" style="font-size:.9rem">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Ten</th>
+                    <th>Staff</th>
+                    <th>Superuser</th>
+                    <th>Active</th>
+                    <th>Ngay tao</th>
+                    <th class="text-end">Hanh dong</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="fw-semibold">{{ u.username }}</td>
+                    <td>{{ u.email|default:"-" }}</td>
+                    <td>{{ u.get_full_name|default:"-" }}</td>
+                    <td>{% if u.is_staff %}<span class="badge-category" style="background:rgba(0,184,148,.15);color:#00B894">Yes</span>{% else %}<span class="badge-category">No</span>{% endif %}</td>
+                    <td>{% if u.is_superuser %}<span class="badge-category" style="background:rgba(108,92,231,.15);color:#6C5CE7">Yes</span>{% else %}<span class="badge-category">No</span>{% endif %}</td>
+                    <td>{% if u.is_active %}<span class="badge-category" style="background:rgba(253,203,110,.2);color:#E17055">Active</span>{% else %}<span class="badge-category" style="background:rgba(225,112,85,.15);color:#E17055">Locked</span>{% endif %}</td>
+                    <td>{{ u.date_joined|date:"d/m/Y" }}</td>
+                    <td class="text-end">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <form action="{% url 'dashboard_user_toggle_staff' u.pk %}" method="post">
+                                {% csrf_token %}
+                                <button class="btn btn-glass btn-sm" type="submit">Toggle staff</button>
+                            </form>
+                            <form action="{% url 'dashboard_user_toggle_active' u.pk %}" method="post">
+                                {% csrf_token %}
+                                <button class="btn btn-glass btn-sm" type="submit">Toggle active</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted">Khong co nguoi dung nao.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -23,6 +23,11 @@ class Book(models.Model):
     num_pages = models.PositiveIntegerField(blank=True, null=True)
     cover_image = models.URLField(blank=True)
     stock = models.PositiveIntegerField(default=100, help_text="Số lượng tồn kho")
+    
+    # New fields for E-reader
+    is_digital = models.BooleanField(default=False, help_text="Có hỗ trợ đọc trực tuyến không")
+    content_text = models.TextField(blank=True, help_text="Nội dung sách (Text)")
+    
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self) -> str:
@@ -31,6 +36,20 @@ class Book(models.Model):
     @property
     def in_stock(self):
         return self.stock > 0
+
+
+class ReadingProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reading_progress")
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="read_by_users")
+    last_page = models.PositiveIntegerField(default=1)
+    last_read_at = models.DateTimeField(auto_now=True)
+    is_finished = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("user", "book")
+
+    def __str__(self) -> str:
+        return f"{self.user.username} reading {self.book.title}"
 
 
 class Wishlist(models.Model):
@@ -133,6 +152,7 @@ class OrderItem(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="order_items")
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    is_digital_purchase = models.BooleanField(default=False, help_text="Đánh dấu nếu đây là đơn mua bản E-book")
 
     def __str__(self) -> str:
         return f"{self.book} x {self.quantity}"

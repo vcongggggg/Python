@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Đang đọc: {{ book.title }} - Bookie Reader{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --reader-bg: #0a0a0c;
+        --reader-text: #e0e0e0;
+        --reader-font-size: 1.25rem;
+        --reader-max-width: 800px;
+    }
+
+    body[data-theme="light"] {
+        --reader-bg: #fdfdfd;
+        --reader-text: #2d3436;
+    }
+
+    .reader-container {
+        background: var(--reader-bg);
+        min-height: 100vh;
+        color: var(--reader-text);
+        padding-top: 80px;
+        transition: all 0.3s ease;
+    }
+
+    .reader-content {
+        max-width: var(--reader-max-width);
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family: 'Inter', serif;
+        line-height: 1.8;
+        font-size: var(--reader-font-size);
+        text-align: justify;
+    }
+
+    .reader-header {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: 60px;
+        background: rgba(10, 10, 12, 0.8);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        z-index: 1000;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .reader-footer {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        padding: 20px;
+        background: linear-gradient(to top, var(--reader-bg), transparent);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .progress-wrapper {
+        width: 100%;
+        max-width: var(--reader-max-width);
+        height: 4px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--gradient-1);
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+
+    .page-controls {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .btn-reader {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: var(--reader-text);
+        padding: 8px 20px;
+        border-radius: 30px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-reader:hover:not(:disabled) {
+        background: var(--gradient-1);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-reader:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .ai-bubble-btn {
+        position: fixed;
+        right: 30px;
+        bottom: 100px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--gradient-2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .ai-bubble-btn:hover {
+        transform: scale(1.1) rotate(15deg);
+    }
+
+    .page-num {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    /* Animation cho trang */
+    .page-fade {
+        animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reader-container">
+    <div class="reader-header">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{% url 'book_detail' book.pk %}" class="text-white" style="text-decoration:none">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <span class="fw-bold text-truncate" style="max-width: 200px;">{{ book.title }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-light rounded-pill dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-type"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-3 glass-panel" style="width: 200px;">
+                    <label class="small text-muted mb-2">Cỡ chữ</label>
+                    <input type="range" class="form-range" min="16" max="32" value="20" id="fontSizeRange">
+                </div>
+            </div>
+            <button id="theme-toggle-reader" class="btn btn-sm btn-outline-light rounded-pill">
+                <i class="bi bi-brightness-high"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="reader-content" id="pageContent">
+        <!-- Nội dung sẽ được load bởi JS -->
+    </div>
+
+    <div class="reader-footer">
+        <div class="progress-wrapper">
+            <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center w-100" style="max-width: var(--reader-max-width)">
+            <div class="page-num" id="pageIndicator">Trang 1 / 1</div>
+            <div class="page-controls">
+                <button class="btn-reader" id="prevBtn"><i class="bi bi-chevron-left"></i> Trước</button>
+                <button class="btn-reader" id="nextBtn">Tiếp <i class="bi bi-chevron-right"></i></button>
+            </div>
+            <div class="ai-trigger">
+                 <button class="btn btn-sm btn-outline-info rounded-pill" id="askAI">
+                     <i class="bi bi-robot me-1"></i> Giải thích trang này
+                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ai-bubble-btn" id="floatingChatBtn" title="Hỏi Bookie AI">
+        <i class="bi bi-chat-dots-fill"></i>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const pages = {{ pages|safe }};
+    const isPreview = {{ is_preview|yesno:"true,false" }};
+    const bookId = {{ book.pk }};
+    
+    // Nếu là bản xem thử, thêm một trang kêu gọi hành động ở cuối
+    if (isPreview) {
+        pages.push(`
+            <div class="text-center" style="margin-top: 10vh;">
+                <div style="font-size: 4rem; color: var(--gold); mb-3"><i class="bi bi-unlock"></i></div>
+                <h2 class="fw-bold text-white mb-3">Bạn đã đọc hết phần xem thử!</h2>
+                <p class="text-muted mb-4" style="font-size: 1.1rem;">Cuốn sách này vẫn còn rất nhiều điều thú vị đang chờ đón. Hãy mua bản E-book để mở khóa toàn bộ nội dung.</p>
+                <form action="/cart/add/${bookId}/" method="post" class="d-inline-block">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${getCookie('csrftoken')}">
+                    <input type="hidden" name="format" value="digital">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="btn btn-gradient px-5 py-3 rounded-pill" style="font-size: 1.2rem;">
+                        <i class="bi bi-cart-check me-2"></i> Mua E-book ngay
+                    </button>
+                </form>
+                <div class="mt-4">
+                    <a href="/books/${bookId}/" class="text-muted small text-decoration-none"><i class="bi bi-arrow-left"></i> Quay lại trang sách</a>
+                </div>
+            </div>
+        `);
+    }
+
+    let currentPage = {{ current_page }};
+    const totalPages = pages.length;
+
+    const contentEl = document.getElementById('pageContent');
+    const pageIndicator = document.getElementById('pageIndicator');
+    const progressBar = document.getElementById('progressBar');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const fontSizeRange = document.getElementById('fontSizeRange');
+
+    function updateUI() {
+        // Load content
+        contentEl.innerHTML = `<div class="page-fade">${pages[currentPage - 1]}</div>`;
+        
+        // Update stats
+        if (isPreview && currentPage === totalPages) {
+            pageIndicator.textContent = "Mở khóa nội dung";
+            progressBar.style.width = "100%";
+        } else {
+            const displayTotal = isPreview ? totalPages - 1 : totalPages;
+            pageIndicator.textContent = `Trang ${currentPage} / ${displayTotal}`;
+            const progressPct = (currentPage / displayTotal) * 100;
+            progressBar.style.width = `${progressPct}%`;
+        }
+        
+        // Buttons state
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Save progress to server
+        saveProgress();
+    }
+
+    function saveProgress() {
+        fetch(`/api/v1/books/${bookId}/progress/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                page: currentPage,
+                finished: currentPage === totalPages
+            })
+        });
+    }
+
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            updateUI();
+        }
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            updateUI();
+        }
+    });
+
+    fontSizeRange.addEventListener('input', (e) => {
+        contentEl.style.fontSize = `${e.target.value}px`;
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') nextBtn.click();
+        if (e.key === 'ArrowLeft') prevBtn.click();
+    });
+
+    // AI Explanation Trigger
+    document.getElementById('askAI').addEventListener('click', () => {
+        const text = pages[currentPage - 1].substring(0, 500); // Gửi 500 ký tự đầu của trang
+        if (window.openChatbot) {
+            window.openChatbot(`Hãy giải thích nội dung trang này cho tôi: \n\n"${text}..."`);
+        } else {
+            showToast("Đang mở chatbot...", "info");
+            const chatBtn = document.getElementById('chatbot-toggle');
+            if (chatBtn) chatBtn.click();
+        }
+    });
+
+    // Khởi tạo trang đầu tiên
+    updateUI();
+</script>
+{% endblock %}

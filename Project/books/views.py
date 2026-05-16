@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, F, Q, Sum
-from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -48,11 +48,31 @@ def _cart_items(request):
     cart = _get_cart(request)
     if not cart:
         return []
-    books = Book.objects.filter(pk__in=cart.keys())
-    return [
-        {"book": b, "quantity": cart[str(b.pk)], "subtotal": b.price * cart[str(b.pk)]}
-        for b in books
-    ]
+        
+    # Extract book IDs from keys (support both "1" and "1_physical")
+    book_ids = []
+    for k in cart.keys():
+        book_ids.append(int(k.split('_')[0]))
+        
+    books = Book.objects.filter(pk__in=set(book_ids))
+    book_map = {str(b.pk): b for b in books}
+    
+    items = []
+    for k, qty in cart.items():
+        parts = k.split('_')
+        b_id = parts[0]
+        book_format = parts[1] if len(parts) > 1 else "physical"
+        
+        b = book_map.get(b_id)
+        if b:
+            items.append({
+                "book": b,
+                "quantity": qty,
+                "subtotal": b.price * qty,
+                "format": book_format,
+                "key": k,
+            })
+    return items
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -447,25 +467,37 @@ def cart_view(request):
 
 def add_to_cart(request, book_id: int):
     book = get_object_or_404(Book, pk=book_id)
+    
+    # Get the requested format (default to physical)
+    book_format = request.POST.get("format", "physical")
+    if book_format == "digital" and not book.is_digital:
+        messages.error(request, "Sách này không có bản E-book.")
+        return redirect("book_detail", pk=book.pk)
 
-    # Check stock
-    if not book.in_stock:
+    # Check stock only for physical books
+    if book_format == "physical" and not book.in_stock:
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"status": "error", "message": f"'{book.title}' đã hết hàng."})
         messages.error(request, f"'{book.title}' đã hết hàng.")
         return redirect("book_detail", pk=book.pk)
 
     cart = _get_cart(request)
-    key = str(book.pk)
-    qty = request.POST.get("quantity") or request.GET.get("quantity") or 1
-    try:
-        qty = max(1, int(qty))
-    except (TypeError, ValueError):
-        qty = 1
-
-    new_qty = cart.get(key, 0) + qty
-    if new_qty > book.stock:
-        new_qty = book.stock
+    
+    # Create a unique key based on format
+    key = f"{book.pk}_{book_format}"
+    
+    if book_format == "digital":
+        qty = 1 # E-books only need 1 copy
+        new_qty = 1
+    else:
+        qty = request.POST.get("quantity") or request.GET.get("quantity") or 1
+        try:
+            qty = max(1, int(qty))
+        except (TypeError, ValueError):
+            qty = 1
+        new_qty = cart.get(key, 0) + qty
+        if new_qty > book.stock:
+            new_qty = book.stock
 
     cart[key] = new_qty
     _set_cart(request, cart)
@@ -473,17 +505,21 @@ def add_to_cart(request, book_id: int):
     # AJAX response
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         cart_total = sum(cart.values())
+        format_str = "E-book" if book_format == "digital" else "sách giấy"
         return JsonResponse({
             "status": "ok",
-            "message": f"Đã thêm '{book.title}' vào giỏ hàng.",
+            "message": f"Đã thêm bản {format_str} của '{book.title}' vào giỏ.",
             "cart_count": cart_total,
         })
 
-    messages.success(request, f"Đã thêm '{book.title}' vào giỏ.")
+    format_str = "E-book" if book_format == "digital" else "sách giấy"
+    messages.success(request, f"Đã thêm bản {format_str} của '{book.title}' vào giỏ.")
+    
     next_url = request.GET.get("next") or request.POST.get("next") or "book_detail"
     if next_url == "book_detail":
         return redirect("book_detail", pk=book.pk)
     return redirect("cart")
+
 
 
 def update_cart(request):
@@ -506,11 +542,10 @@ def update_cart(request):
     return redirect("cart")
 
 
-def remove_from_cart(request, book_id: int):
+def remove_from_cart(request, item_key: str):
     cart = _get_cart(request)
-    key = str(book_id)
-    if key in cart:
-        del cart[key]
+    if item_key in cart:
+        del cart[item_key]
         _set_cart(request, cart)
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse({"status": "ok", "cart_count": sum(cart.values())})
@@ -557,16 +592,20 @@ def checkout(request):
                 payment_method=form.cleaned_data["payment_method"],
             )
             for row in items:
+                is_digital = row.get("format") == "digital"
                 OrderItem.objects.create(
                     order=order,
                     book=row["book"],
                     quantity=row["quantity"],
                     price=row["book"].price,
+                    is_digital_purchase=is_digital
                 )
-                # Decrease stock
-                book = row["book"]
-                book.stock = max(0, book.stock - row["quantity"])
-                book.save(update_fields=["stock"])
+                
+                # Decrease stock ONLY for physical books
+                if not is_digital:
+                    book = row["book"]
+                    book.stock = max(0, book.stock - row["quantity"])
+                    book.save(update_fields=["stock"])
 
             if applied_coupon:
                 applied_coupon.used_count += 1
@@ -1146,7 +1185,7 @@ def _get_explainable_recommendations(user, limit=8):
 
 
 @staff_member_required
-def dashboard(request):
+def dashboard(request: HttpRequest) -> HttpResponse:
     now = timezone.now()
 
     # Overall stats
@@ -1223,6 +1262,75 @@ def dashboard(request):
         "order_statuses": Order.STATUS_CHOICES,
     }
     return render(request, "books/dashboard.html", context)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Admin Users
+# ═══════════════════════════════════════════════════════════════════
+
+
+def _require_superuser(request: HttpRequest) -> bool:
+    if request.user.is_superuser:
+        return True
+    messages.error(request, "Chi superuser moi duoc thuc hien thao tac nay.")
+    return False
+
+
+@staff_member_required
+def dashboard_users(request: HttpRequest) -> HttpResponse:
+    query = request.GET.get("q", "").strip()
+    users_qs = User.objects.all()
+    if query:
+        users_qs = users_qs.filter(
+            Q(username__icontains=query)
+            | Q(email__icontains=query)
+            | Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+        )
+    users_qs = users_qs.order_by("-date_joined")
+    context = {
+        "users": users_qs[:200],
+        "query": query,
+    }
+    return render(request, "books/dashboard_users.html", context)
+
+
+@staff_member_required
+@require_POST
+def dashboard_user_toggle_staff(request: HttpRequest, pk: int) -> HttpResponse:
+    if not _require_superuser(request):
+        return redirect("dashboard_users")
+    target = get_object_or_404(User, pk=pk)
+    if target.pk == request.user.pk:
+        messages.error(request, "Khong the tu thay doi quyen cua chinh minh.")
+        return redirect("dashboard_users")
+    if target.is_superuser:
+        messages.error(request, "Khong the thay doi quyen cua superuser khac.")
+        return redirect("dashboard_users")
+    target.is_staff = not target.is_staff
+    target.save(update_fields=["is_staff"])
+    status_text = "da cap quyen" if target.is_staff else "da go quyen"
+    messages.success(request, f"{status_text} staff cho {target.username}.")
+    return redirect("dashboard_users")
+
+
+@staff_member_required
+@require_POST
+def dashboard_user_toggle_active(request: HttpRequest, pk: int) -> HttpResponse:
+    if not _require_superuser(request):
+        return redirect("dashboard_users")
+    target = get_object_or_404(User, pk=pk)
+    if target.pk == request.user.pk:
+        messages.error(request, "Khong the tu khoa tai khoan cua chinh minh.")
+        return redirect("dashboard_users")
+    if target.is_superuser:
+        messages.error(request, "Khong the khoa superuser khac.")
+        return redirect("dashboard_users")
+    target.is_active = not target.is_active
+    target.save(update_fields=["is_active"])
+    status_text = "da kich hoat" if target.is_active else "da khoa"
+    messages.success(request, f"{status_text} tai khoan {target.username}.")
+    return redirect("dashboard_users")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1633,3 +1741,74 @@ def api_chatbot_stream(request) -> HttpResponse:
         import traceback
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=400)
+
+
+@login_required
+def read_book(request, pk: int):
+    """View to open the cinematic e-reader."""
+    book = get_object_or_404(Book, pk=pk)
+    
+    if not book.is_digital:
+        messages.warning(request, "Cuốn sách này hiện chưa hỗ trợ đọc trực tuyến.")
+        return redirect('book_detail', pk=pk)
+        
+    # Check ownership if the book is not free
+    is_preview = False
+    if book.price > 0:
+        has_purchased = OrderItem.objects.filter(
+            order__user=request.user,
+            book=book,
+            is_digital_purchase=True
+        ).exists()
+        
+        if not has_purchased:
+            is_preview = True
+            messages.info(request, "Bạn đang xem bản đọc thử (Look Inside).")
+
+    # Get or create progress
+    progress, created = ReadingProgress.objects.get_or_create(user=request.user, book=book)
+    
+    # Split content into pages (simple splitting by newline or length for now)
+    pages = book.content_text.split('\n\n')
+    
+    # If preview, limit pages to 10% or 5 pages max
+    if is_preview:
+        preview_limit = max(5, int(len(pages) * 0.10))
+        pages = pages[:preview_limit]
+        
+    total_pages = len(pages)
+    
+    # Ensure last_page is within bounds
+    current_page = min(max(1, progress.last_page), total_pages) if total_pages > 0 else 1
+
+    context = {
+        "book": book,
+        "pages": pages,
+        "total_pages": total_pages,
+        "current_page": current_page,
+        "progress": progress,
+        "is_preview": is_preview,
+    }
+    return render(request, "books/reader.html", context)
+
+
+@login_required
+@csrf_exempt
+def api_save_reading_progress(request, pk: int):
+    """AJAX endpoint to save reading progress."""
+    if request.method == "POST":
+        book = get_object_or_404(Book, pk=pk)
+        try:
+            data = json.loads(request.body)
+            page = int(data.get("page", 1))
+            finished = data.get("finished", False)
+            
+            progress, _ = ReadingProgress.objects.get_or_create(user=request.user, book=book)
+            progress.last_page = page
+            progress.is_finished = finished
+            progress.save()
+            
+            return JsonResponse({"status": "success"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+    return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
