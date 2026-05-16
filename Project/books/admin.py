@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Book, Category, Coupon, Order, OrderItem, Rating, Wishlist
+from .models import AdminAuditLog, Book, Category, Coupon, Order, OrderItem, Rating, Wishlist
 
 
 @admin.register(Category)
@@ -75,3 +75,10 @@ class CouponAdmin(admin.ModelAdmin):
     list_filter = ("active", "discount_type")
     list_editable = ("active",)
     search_fields = ("code",)
+
+
+@admin.register(AdminAuditLog)
+class AdminAuditLogAdmin(admin.ModelAdmin):
+    list_display = ("action", "actor", "target_type", "target_id", "created_at")
+    list_filter = ("action", "target_type")
+    search_fields = ("action", "target_type", "target_id", "actor__username")

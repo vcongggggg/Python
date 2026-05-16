@@ -20,8 +20,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .chatbot import BookieChatbot
-from .forms import CheckoutForm, ProfileEditForm, RatingForm, RegisterForm
-from .models import Book, Category, Coupon, Order, OrderItem, Rating, Wishlist
+from .forms import (
+    BookAdminForm,
+    CheckoutForm,
+    CouponAdminForm,
+    ProfileEditForm,
+    RatingForm,
+    RegisterForm,
+)
+from .models import AdminAuditLog, Book, Category, Coupon, Order, OrderItem, Rating, Wishlist
 from .ollama_client import OllamaClient, OllamaConfig
 
 User = get_user_model()
@@ -1265,19 +1272,42 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
 
 # ═══════════════════════════════════════════════════════════════════
+# Admin Helpers
+# ═══════════════════════════════════════════════════════════════════
+
+
+def _require_perm(request: HttpRequest, perm: str, redirect_name: str) -> bool:
+    if request.user.has_perm(perm):
+        return True
+    messages.error(request, "Ban khong co quyen thuc hien thao tac nay.")
+    return False
+
+
+def _log_admin_action(
+    request: HttpRequest,
+    action: str,
+    target_type: str,
+    target_id: str,
+    metadata: dict | None = None,
+) -> None:
+    AdminAuditLog.objects.create(
+        actor=request.user if request.user.is_authenticated else None,
+        action=action,
+        target_type=target_type,
+        target_id=str(target_id),
+        metadata=metadata or {},
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════
 # Admin Users
 # ═══════════════════════════════════════════════════════════════════
 
 
-def _require_superuser(request: HttpRequest) -> bool:
-    if request.user.is_superuser:
-        return True
-    messages.error(request, "Chi superuser moi duoc thuc hien thao tac nay.")
-    return False
-
-
 @staff_member_required
 def dashboard_users(request: HttpRequest) -> HttpResponse:
+    if not _require_perm(request, "auth.view_user", "dashboard"):
+        return redirect("dashboard")
     query = request.GET.get("q", "").strip()
     users_qs = User.objects.all()
     if query:
@@ -1298,7 +1328,7 @@ def dashboard_users(request: HttpRequest) -> HttpResponse:
 @staff_member_required
 @require_POST
 def dashboard_user_toggle_staff(request: HttpRequest, pk: int) -> HttpResponse:
-    if not _require_superuser(request):
+    if not _require_perm(request, "auth.change_user", "dashboard_users"):
         return redirect("dashboard_users")
     target = get_object_or_404(User, pk=pk)
     if target.pk == request.user.pk:
@@ -1310,6 +1340,13 @@ def dashboard_user_toggle_staff(request: HttpRequest, pk: int) -> HttpResponse:
     target.is_staff = not target.is_staff
     target.save(update_fields=["is_staff"])
     status_text = "da cap quyen" if target.is_staff else "da go quyen"
+    _log_admin_action(
+        request,
+        action="toggle_staff",
+        target_type="user",
+        target_id=target.pk,
+        metadata={"is_staff": target.is_staff},
+    )
     messages.success(request, f"{status_text} staff cho {target.username}.")
     return redirect("dashboard_users")
 
@@ -1317,7 +1354,7 @@ def dashboard_user_toggle_staff(request: HttpRequest, pk: int) -> HttpResponse:
 @staff_member_required
 @require_POST
 def dashboard_user_toggle_active(request: HttpRequest, pk: int) -> HttpResponse:
-    if not _require_superuser(request):
+    if not _require_perm(request, "auth.change_user", "dashboard_users"):
         return redirect("dashboard_users")
     target = get_object_or_404(User, pk=pk)
     if target.pk == request.user.pk:
@@ -1329,8 +1366,235 @@ def dashboard_user_toggle_active(request: HttpRequest, pk: int) -> HttpResponse:
     target.is_active = not target.is_active
     target.save(update_fields=["is_active"])
     status_text = "da kich hoat" if target.is_active else "da khoa"
+    _log_admin_action(
+        request,
+        action="toggle_active",
+        target_type="user",
+        target_id=target.pk,
+        metadata={"is_active": target.is_active},
+    )
     messages.success(request, f"{status_text} tai khoan {target.username}.")
     return redirect("dashboard_users")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Admin Books
+# ═══════════════════════════════════════════════════════════════════
+
+
+@staff_member_required
+def dashboard_books(request: HttpRequest) -> HttpResponse:
+    if not _require_perm(request, "books.view_book", "dashboard"):
+        return redirect("dashboard")
+    query = request.GET.get("q", "").strip()
+    category_id = request.GET.get("category")
+    qs = Book.objects.select_related("category")
+    if query:
+        qs = qs.filter(Q(title__icontains=query) | Q(author__icontains=query))
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+    qs = qs.order_by("-created_at")
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+    context = {
+        "books": page.object_list,
+        "page": page,
+        "categories": Category.objects.order_by("name"),
+        "query": query,
+        "category_id": category_id,
+    }
+    return render(request, "books/dashboard_books.html", context)
+
+
+@staff_member_required
+def dashboard_book_create(request: HttpRequest) -> HttpResponse:
+    if not _require_perm(request, "books.add_book", "dashboard_books"):
+        return redirect("dashboard_books")
+    if request.method == "POST":
+        form = BookAdminForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            book = Book.objects.create(**data)
+            _log_admin_action(
+                request,
+                action="book_create",
+                target_type="book",
+                target_id=book.pk,
+                metadata={"title": book.title},
+            )
+            messages.success(request, "Da tao sach moi.")
+            return redirect("dashboard_books")
+    else:
+        form = BookAdminForm()
+    return render(request, "books/dashboard_book_form.html", {"form": form, "mode": "create"})
+
+
+@staff_member_required
+def dashboard_book_edit(request: HttpRequest, pk: int) -> HttpResponse:
+    if not _require_perm(request, "books.change_book", "dashboard_books"):
+        return redirect("dashboard_books")
+    book = get_object_or_404(Book, pk=pk)
+    if request.method == "POST":
+        form = BookAdminForm(request.POST, instance=book)
+        if form.is_valid():
+            data = form.cleaned_data
+            Book.objects.filter(pk=book.pk).update(**data)
+            _log_admin_action(
+                request,
+                action="book_edit",
+                target_type="book",
+                target_id=book.pk,
+                metadata={"title": data.get("title")},
+            )
+            messages.success(request, "Da cap nhat sach.")
+            return redirect("dashboard_books")
+    else:
+        form = BookAdminForm(instance=book)
+    return render(
+        request,
+        "books/dashboard_book_form.html",
+        {"form": form, "mode": "edit", "book": book},
+    )
+
+
+@staff_member_required
+@require_POST
+def dashboard_book_delete(request: HttpRequest, pk: int) -> HttpResponse:
+    if not _require_perm(request, "books.delete_book", "dashboard_books"):
+        return redirect("dashboard_books")
+    book = Book.objects.filter(pk=pk).first()
+    Book.objects.filter(pk=pk).delete()
+    _log_admin_action(
+        request,
+        action="book_delete",
+        target_type="book",
+        target_id=pk,
+        metadata={"title": book.title if book else ""},
+    )
+    messages.success(request, "Da xoa sach.")
+    return redirect("dashboard_books")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Admin Coupons
+# ═══════════════════════════════════════════════════════════════════
+
+
+@staff_member_required
+def dashboard_coupons(request: HttpRequest) -> HttpResponse:
+    if not _require_perm(request, "books.view_coupon", "dashboard"):
+        return redirect("dashboard")
+    query = request.GET.get("q", "").strip()
+    qs = Coupon.objects.all()
+    if query:
+        qs = qs.filter(code__icontains=query)
+    qs = qs.order_by("-created_at")
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+    context = {
+        "coupons": page.object_list,
+        "page": page,
+        "query": query,
+    }
+    return render(request, "books/dashboard_coupons.html", context)
+
+
+@staff_member_required
+def dashboard_coupon_create(request: HttpRequest) -> HttpResponse:
+    if not _require_perm(request, "books.add_coupon", "dashboard_coupons"):
+        return redirect("dashboard_coupons")
+    if request.method == "POST":
+        form = CouponAdminForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            coupon = Coupon.objects.create(**data)
+            _log_admin_action(
+                request,
+                action="coupon_create",
+                target_type="coupon",
+                target_id=coupon.pk,
+                metadata={"code": coupon.code},
+            )
+            messages.success(request, "Da tao ma giam gia.")
+            return redirect("dashboard_coupons")
+    else:
+        form = CouponAdminForm()
+    return render(request, "books/dashboard_coupon_form.html", {"form": form, "mode": "create"})
+
+
+@staff_member_required
+def dashboard_coupon_edit(request: HttpRequest, pk: int) -> HttpResponse:
+    if not _require_perm(request, "books.change_coupon", "dashboard_coupons"):
+        return redirect("dashboard_coupons")
+    coupon = get_object_or_404(Coupon, pk=pk)
+    if request.method == "POST":
+        form = CouponAdminForm(request.POST, instance=coupon)
+        if form.is_valid():
+            data = form.cleaned_data
+            Coupon.objects.filter(pk=coupon.pk).update(**data)
+            _log_admin_action(
+                request,
+                action="coupon_edit",
+                target_type="coupon",
+                target_id=coupon.pk,
+                metadata={"code": data.get("code")},
+            )
+            messages.success(request, "Da cap nhat ma giam gia.")
+            return redirect("dashboard_coupons")
+    else:
+        form = CouponAdminForm(instance=coupon)
+    return render(
+        request,
+        "books/dashboard_coupon_form.html",
+        {"form": form, "mode": "edit", "coupon": coupon},
+    )
+
+
+@staff_member_required
+@require_POST
+def dashboard_coupon_delete(request: HttpRequest, pk: int) -> HttpResponse:
+    if not _require_perm(request, "books.delete_coupon", "dashboard_coupons"):
+        return redirect("dashboard_coupons")
+    coupon = Coupon.objects.filter(pk=pk).first()
+    Coupon.objects.filter(pk=pk).delete()
+    _log_admin_action(
+        request,
+        action="coupon_delete",
+        target_type="coupon",
+        target_id=pk,
+        metadata={"code": coupon.code if coupon else ""},
+    )
+    messages.success(request, "Da xoa ma giam gia.")
+    return redirect("dashboard_coupons")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Admin Orders
+# ═══════════════════════════════════════════════════════════════════
+
+
+@staff_member_required
+def dashboard_orders(request: HttpRequest) -> HttpResponse:
+    if not _require_perm(request, "books.view_order", "dashboard"):
+        return redirect("dashboard")
+    query = request.GET.get("q", "").strip()
+    status = request.GET.get("status")
+    qs = Order.objects.select_related("user")
+    if query:
+        qs = qs.filter(Q(pk__icontains=query) | Q(user__username__icontains=query))
+    if status:
+        qs = qs.filter(status=status)
+    qs = qs.order_by("-created_at")
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+    context = {
+        "orders": page.object_list,
+        "page": page,
+        "query": query,
+        "status": status,
+        "order_statuses": Order.STATUS_CHOICES,
+    }
+    return render(request, "books/dashboard_orders.html", context)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1340,6 +1604,8 @@ def dashboard_user_toggle_active(request: HttpRequest, pk: int) -> HttpResponse:
 
 @staff_member_required
 def export_orders_csv(request):
+    if not _require_perm(request, "books.view_order", "dashboard"):
+        return redirect("dashboard")
     response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
     response["Content-Disposition"] = 'attachment; filename="orders.csv"'
     response.write("\ufeff")  # BOM for Excel
@@ -1356,11 +1622,20 @@ def export_orders_csv(request):
             order.created_at.strftime("%Y-%m-%d %H:%M"),
             order.shipping_address or "",
         ])
+    _log_admin_action(
+        request,
+        action="export_orders_csv",
+        target_type="order",
+        target_id="all",
+        metadata={"count": Order.objects.count()},
+    )
     return response
 
 
 @staff_member_required
 def export_books_csv(request):
+    if not _require_perm(request, "books.view_book", "dashboard"):
+        return redirect("dashboard")
     response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
     response["Content-Disposition"] = 'attachment; filename="books.csv"'
     response.write("\ufeff")
@@ -1377,19 +1652,54 @@ def export_books_csv(request):
             book.published_year or "",
             (book.description or "")[:200],
         ])
+    _log_admin_action(
+        request,
+        action="export_books_csv",
+        target_type="book",
+        target_id="all",
+        metadata={"count": Book.objects.count()},
+    )
     return response
 
 
 @staff_member_required
 @require_POST
 def api_update_order_status(request, pk: int):
+    if not request.user.has_perm("books.change_order"):
+        return JsonResponse({"status": "error", "message": "Khong du quyen."}, status=403)
     order = get_object_or_404(Order, pk=pk)
     new_status = request.POST.get("status")
     if new_status in dict(Order.STATUS_CHOICES):
         order.status = new_status
         order.save(update_fields=["status"])
+        _log_admin_action(
+            request,
+            action="order_status_update",
+            target_type="order",
+            target_id=order.pk,
+            metadata={"status": order.status},
+        )
         return JsonResponse({"status": "ok", "message": f"Đã cập nhật đơn hàng #{order.pk} sang {order.status_display_vi}."})
     return JsonResponse({"status": "error", "message": "Trạng thái không hợp lệ."}, status=400)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Admin Audit Logs
+# ═══════════════════════════════════════════════════════════════════
+
+
+@staff_member_required
+def dashboard_audit_logs(request: HttpRequest) -> HttpResponse:
+    if not _require_perm(request, "books.view_adminauditlog", "dashboard"):
+        return redirect("dashboard")
+    qs = AdminAuditLog.objects.select_related("actor")
+    paginator = Paginator(qs, 30)
+    page = paginator.get_page(request.GET.get("page", 1))
+    return render(
+        request,
+        "books/dashboard_audit.html",
+        {"logs": page.object_list, "page": page},
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════

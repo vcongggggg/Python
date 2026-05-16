@@ -176,3 +176,18 @@ class Rating(models.Model):
 
     def __str__(self) -> str:
         return f"{self.book} rated {self.score} by {self.user}"
+
+
+class AdminAuditLog(models.Model):
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="admin_audit_logs")
+    action = models.CharField(max_length=80)
+    target_type = models.CharField(max_length=80)
+    target_id = models.CharField(max_length=64, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.action} by {self.actor or 'system'}"

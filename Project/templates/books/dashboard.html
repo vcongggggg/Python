@@ -6,9 +6,27 @@
         <i class="bi bi-speedometer2 me-2" style="color:var(--primary)"></i>Dashboard
     </h1>
     <div class="d-flex gap-2">
+        {% if perms.auth.view_user %}
         <a href="{% url 'dashboard_users' %}" class="btn btn-glass btn-sm"><i class="bi bi-people me-1"></i>Quan ly nguoi dung</a>
+        {% endif %}
+        {% if perms.books.view_book %}
+        <a href="{% url 'dashboard_books' %}" class="btn btn-glass btn-sm"><i class="bi bi-book me-1"></i>Quan ly sach</a>
+        {% endif %}
+        {% if perms.books.view_order %}
+        <a href="{% url 'dashboard_orders' %}" class="btn btn-glass btn-sm"><i class="bi bi-receipt me-1"></i>Don hang</a>
+        {% endif %}
+        {% if perms.books.view_coupon %}
+        <a href="{% url 'dashboard_coupons' %}" class="btn btn-glass btn-sm"><i class="bi bi-ticket-perforated me-1"></i>Ma giam gia</a>
+        {% endif %}
+        {% if perms.books.view_adminauditlog %}
+        <a href="{% url 'dashboard_audit_logs' %}" class="btn btn-glass btn-sm"><i class="bi bi-shield-check me-1"></i>Audit log</a>
+        {% endif %}
+        {% if perms.books.view_order %}
         <a href="{% url 'export_orders_csv' %}" class="btn btn-glass btn-sm"><i class="bi bi-download me-1"></i>Export Orders CSV</a>
+        {% endif %}
+        {% if perms.books.view_book %}
         <a href="{% url 'export_books_csv' %}" class="btn btn-glass btn-sm"><i class="bi bi-download me-1"></i>Export Books CSV</a>
+        {% endif %}
     </div>
 </div>
 
