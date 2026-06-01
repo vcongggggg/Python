@@ -1,13 +1,12 @@
 # Huong dan chay bang Docker
 
-Stack Docker dev gom:
+Stack Docker dev mac dinh gom:
 
 - `web`: Django development server
 - `db`: PostgreSQL 16
-- `ollama`: Ollama local server
-- `ollama-pull`: tu dong tai model `qwen2.5:3b` vao Docker volume
 
-Lan dau chay co the mat lau vi Docker phai tai image va model Ollama.
+Chatbot dung Ollama dang chay tren may Windows cua ban qua `host.docker.internal`.
+Cach nay tranh viec Docker tai lai image Ollama va model, tiet kiem nhieu dung luong o C.
 
 ## Chay toan bo stack
 
@@ -53,12 +52,37 @@ hay chay seed trong container sau khi stack da bat.
 
 ## Luu y ve chatbot
 
-Trong Docker, Django goi Ollama qua:
+Truoc khi chay chatbot, dam bao Ollama tren Windows dang co model:
+
+```powershell
+ollama list
+```
+
+Neu chua co model nhe mac dinh:
+
+```powershell
+ollama pull qwen2.5:3b
+```
+
+Trong Docker, Django goi Ollama tren host qua:
 
 ```env
-OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_BASE_URL=http://host.docker.internal:11434
 OLLAMA_MODEL=qwen2.5:3b
 ```
 
 Model `qwen2.5:3b` du nhe cho chatbot cua web. Neu muon dung model nang hon, sua `OLLAMA_MODEL`
-trong `docker-compose.yml` va doi command cua service `ollama-pull`.
+trong `docker-compose.yml`.
+
+## Neu o C bi day do Docker
+
+Dung lenh dang pull truoc bang `Ctrl + C`, sau do chay:
+
+```powershell
+docker compose down --remove-orphans
+docker system prune
+```
+
+Lenh prune se xoa image/container/build cache Docker khong con dung. Khong xoa source code project.
+Neu muon chuyen toan bo Docker Desktop sang o D, vao Docker Desktop Settings va doi vi tri disk image/WSL data
+sang o D, hoac dung tinh nang move disk image neu Docker Desktop cua ban co ho tro.
