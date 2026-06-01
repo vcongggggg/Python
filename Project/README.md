@@ -1,100 +1,107 @@
-# 🌌 Bookie — Next-Gen AI Bookstore ✦
+# Bookie — Midnight Cosmic Library ✦
 
-[![Django](https://img.shields.io/badge/Django-6.0-092E20?style=for-the-badge&logo=django)](https://www.djangoproject.com/)
-[![Ollama](https://img.shields.io/badge/AI-Ollama-FBDB41?style=for-the-badge&logo=ollama)](https://ollama.com/)
-[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
-
-**Bookie** không chỉ là một nhà sách trực tuyến, mà là một trải nghiệm **Midnight Cosmic** cao cấp. Chúng tôi tái định nghĩa cách người dùng tương tác với tri thức thông qua Trí tuệ nhân tạo (AI), hiệu ứng 3D điện ảnh và hệ thống phân tích dữ liệu chuyên sâu.
+**Bookie** là hệ thống thương mại điện tử bán sách hiện đại, được tái định nghĩa với trải nghiệm **Midnight Cosmic** (Vũ trụ nửa đêm). Website tích hợp Trí tuệ nhân tạo (AI) để cá nhân hóa hành trình đọc sách, phân tích cảm xúc và mang đến một giao diện điện ảnh, cao cấp.
 
 ---
 
-## 🚀 Tính năng Đột phá (Core Highlights)
+## 1. Tầm nhìn dự án (Phase 3: Midnight Cosmic Redesign)
 
-### 1. Trợ lý ảo Thông minh (AI Chatbot)
-*   **Kiến trúc Streaming:** Phản hồi ngay lập tức (Real-time) giống như ChatGPT.
-*   **Database-Grounded:** AI tra cứu trực tiếp trong kho sách thực tế để tư vấn chính xác, tránh hiện tượng "hallucination" (bịa đặt).
-*   **Giao diện linh hoạt:** Chatbot có khả năng kéo thả (Draggable) và thu nhỏ cực kỳ mượt mà.
-
-### 2. Reading DNA Dashboard (Dữ liệu thị giác)
-*   **Radar Chart:** Phân tích "sức mạnh" sở thích qua 5 nhóm chủ đề chính.
-*   **Trend Analysis:** Biểu đồ đường theo dõi phong độ đọc sách trong 6 tháng gần nhất.
-*   **AI Persona:** Bookie AI tự động nhận diện hệ độc giả của bạn (Explorer, Dreamer, Builder...) dựa trên hành vi mua sắm.
-
-### 3. Trải nghiệm Midnight Cosmic (UI/UX)
-*   **3D Landing Page:** Giao diện trang chủ sử dụng GSAP và hiệu ứng Aurora Mesh sống động.
-*   **Cinematic Book Cards:** Thẻ sách với hiệu ứng phản chiếu ánh sáng (Glare) và tương tác vật lý.
-*   **Glassmorphism:** Toàn bộ hệ thống sử dụng hiệu ứng kính mờ cao cấp, tối ưu cho chế độ tối (Dark Mode).
+Dự án đã trải qua đợt lột xác toàn diện về UI/UX để chuyển mình từ một nhà sách trực tuyến thông thường thành một **Thư viện số cao cấp**:
+- **Branding:** Tên thương hiệu mới **Bookie** với Logo tối giản phong cách Gold-on-Dark.
+- **Aesthetic:** Concept "Midnight Cosmic" sử dụng dải màu Aurora Mesh, các hạt tinh thể chuyển động và hiệu ứng kính mờ (Glassmorphism).
+- **Technology:** Tích hợp **GSAP (GreenSock)** cho các hiệu ứng cuộn trang mượt mà và ScrollTriggers sinh động.
 
 ---
 
-## 🛠 Technology Stack
+## 2. Các tính năng đột phá (Core Features)
+
+### 2.1 Trải nghiệm người dùng (UX Design)
+- **Bento Grid Categories:** Hệ thống danh mục được sắp xếp theo bố cục Bento hiện đại, sử dụng hình ảnh minh họa 3D phong cách Abstract chuyên sâu.
+- **Infinite Cosmic Ticker:** Thanh chạy thông tin vô tận (Looping Marquee) ở Header, cung cấp các thông tin khuyến mãi và tính năng AI theo thời gian thực.
+- **AI Showcase:** Khu vực giới thiệu công nghệ AI với các thẻ tính năng (Content-based Filtering, Sentiment Analysis, Reading DNA) được thiết kế với Background AI-generated 3D nghệ thuật.
+- **Cinematic Book Cards:** Thẻ sách 3D với hiệu ứng Glare (phản chiếu ánh sáng) và tương tác vật lý khi di chuột.
+
+### 2.2 Trí tuệ nhân tạo (AI Engine)
+- **Content-based Filtering:** Gợi ý sách thông minh dựa trên "Dấu vân tay sở thích" của người dùng.
+- **Sentiment Analysis:** Phân tích cảm xúc nhận xét tự động (Tích cực/Tiêu cực) để xếp hạng chất lượng sách.
+- **Reading DNA:** Bản đồ hóa nhóm tính cách đọc sách (Explorer, Scholar, Critic...) qua đồ thị trực quan.
+- **Bookie Chatbot:** Trợ lý ảo AI có khả năng kéo thả, hỗ trợ giải đáp và tìm kiếm sách 24/7.
+
+### 2.3 Hệ thống nghiệp vụ chuyên nghiệp
+- **Thanh toán QR:** Hệ thống Mock Payment tích hợp tạo mã QR động cho Momo/VNPay.
+- **Dashboard Admin:** Quản lý doanh thu, đơn hàng và kho sách qua các biểu đồ trực quan (Chart.js).
+- **Real-time Interaction:** Toàn bộ hành động Thêm vào giỏ/Yêu thích đều sử dụng AJAX không tải lại trang.
+
+---
+
+## 3. Stack Công nghệ (Technology Stack)
 
 | Thành phần | Công nghệ |
 | :--- | :--- |
-| **Backend** | Django 6.0 (Python 3.12) |
-| **Database** | **PostgreSQL 15** (Containerized) |
-| **AI Engine** | **Ollama** (Model: **Qwen 2.5 7B**) |
-| **Frontend** | GSAP, Chart.js, Vanilla JS, Bootstrap 5 |
-| **DevOps** | **Docker**, Docker Compose |
-| **Cache** | **Redis 7** (Alpine) |
+| **Core Backend** | Django 6.1 (Python 3.12) |
+| **Frontend Foundation** | HTML5, Vanilla JS (ES6+), CSS3 Variables |
+| **Animation Engine** | **GSAP (GreenSock)** + ScrollTrigger |
+| **AI Backend** | **Ollama** (Model: **Qwen 2.5 7B**) |
+| **Database** | **MySQL** (Vận hành thực tế), SQLite3 (Development) |
+| **Payment Gateway** | **VNPay** (Tích hợp thực tế), Mock Payment |
 
 ---
 
-## 📦 Hướng dẫn Cài đặt nhanh (Docker)
+## 4. Hướng dẫn cài đặt & Cấu hình Production
 
-Cách nhanh nhất để chạy dự án mà không cần cài đặt Python hay Database:
+### 1. FILE CẤU HÌNH .ENV (Bắt buộc)
+Tạo file `.env` tại thư mục gốc và cấu hình như sau:
 
-1. **Chuẩn bị:** Cài đặt [Docker Desktop](https://www.docker.com/products/docker-desktop/).
-2. **Cấu hình .env:** Tạo file `.env` tại thư mục gốc:
-   ```env
-   DEBUG=1
-   SECRET_KEY=your-secret-key
-   OLLAMA_BASE_URL=http://host.docker.internal:11434
-   ```
-3. **Khởi chạy:**
-   ```bash
-   docker-compose up --build
-   ```
-4. **Khởi tạo dữ liệu (Chạy 1 lần duy nhất):**
-   ```bash
-   # Migrate Database
-   docker-compose exec web python manage.py migrate
-   # Seed dữ liệu sách mẫu
-   docker-compose exec web python manage.py seed_books --limit 50
-   # Tạo tài khoản Admin
-   docker-compose exec web python manage.py createsuperuser
-   ```
-5. **Truy cập:** Mở trình duyệt tại `http://localhost:8000`.
+```env
+# Django Settings
+SECRET_KEY=your-secret-key
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database MySQL
+DB_NAME=smart_bookstore
+DB_USER=root
+DB_PASSWORD=your-password
+DB_HOST=127.0.0.1
+DB_PORT=3306
+
+# AI / Ollama Settings
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:7b
+
+# VNPay Settings
+VNP_TMN_CODE=your-tmn-code
+VNP_HASH_KEY=your-hash-key
+VNP_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+```
+
+### 2. CÀI ĐẶT THƯ VIỆN
+```bash
+pip install django python-dotenv mysqlclient requests
+```
+
+### 3. KIẾN TRÚC CHATBOT MỚI
+Chatbot Bookie đã được nâng cấp lên kiến trúc **RAG (Retrieval-Augmented Generation)**:
+- **Streaming Response:** Hiển thị câu trả lời ngay lập tức theo thời gian thực (giống ChatGPT).
+- **Database Access:** AI có khả năng tra cứu hơn 400 đầu sách trong kho dữ liệu thực tế để gợi ý chính xác cho khách hàng.
 
 ---
 
-## 📖 Hướng dẫn Phát triển (Local Development)
+## 5. Thông tin thực hiện
 
-Nếu bạn muốn chạy thủ công không dùng Docker:
+- **Dự án:** Bookie — Midnight Cosmic Bookstore
+- **Nhóm thực hiện:** Nhóm 13 (PBL Python)
+- **Trạng thái:** Hoàn thiện 100% (Gold Master Version)
+
+---
+*Giao diện Bookie được tối ưu hóa cho trải nghiệm cao cấp trên trình duyệt hiện đại.*
+
+---
+
+## 6. Hướng dẫn cài đặt
 
 ```bash
 # 1. Cài đặt thư viện
-pip install -r requirements.txt
-
-# 2. Setup Database (SQLite mặc định)
-python manage.py migrate
-python manage.py seed_books --limit 20
-
-# 3. Chạy Server
-python manage.py runserver
-```
-
----
-
-## 🛡️ Bảo mật & Hiệu năng
-*   **Environment Variables:** Toàn bộ thông số nhạy cảm được quản lý qua file `.env`.
-*   **Asset Optimization:** Tự động nén ảnh bìa và tối ưu hóa file tĩnh qua Django Static Files.
-*   **Security:** Tích hợp CSRF Protection, Password Hashing và XSS filtering chuẩn Django.
-
----
-**Dự án được thực hiện bởi:** Nhóm 13 (PBL Python) — *Dẫn đầu trải nghiệm tri thức số.*
- Cài đặt thư viện
 pip install django
 
 # 2. Khởi tạo Database
