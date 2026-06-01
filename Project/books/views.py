@@ -35,7 +35,7 @@ from .forms import (
     RegisterForm,
 )
 from .models import AdminAuditLog, Book, Category, Coupon, Order, OrderItem, Rating, ReadingProgress, Wishlist
-from .ollama_client import OllamaClient, OllamaConfig
+from .ollama_client import OllamaClient, OllamaConfig, OllamaError
 
 User = get_user_model()
 
@@ -1893,9 +1893,14 @@ def _stream_chat_payload(payload_or_generator, is_real_stream=False, chunk_size:
 def _stream_chat_payload_with_history(request, stream_gen, user_message, found_books) -> Iterable[bytes]:
     yield json.dumps({"type": "start"}, ensure_ascii=False).encode("utf-8") + b"\n"
     full_text = ""
-    for chunk in stream_gen:
-        full_text += chunk
-        yield json.dumps({"type": "delta", "content": chunk}, ensure_ascii=False).encode("utf-8") + b"\n"
+    try:
+        for chunk in stream_gen:
+            full_text += chunk
+            yield json.dumps({"type": "delta", "content": chunk}, ensure_ascii=False).encode("utf-8") + b"\n"
+    except OllamaError:
+        fallback_text = "Xin lỗi, Bookie đang hơi chậm. Bạn thử lại sau vài giây nhé!"
+        full_text = full_text or fallback_text
+        yield json.dumps({"type": "delta", "content": fallback_text}, ensure_ascii=False).encode("utf-8") + b"\n"
 
     payload = {"text": full_text, "type": "text"}
     if found_books:

@@ -106,7 +106,7 @@ else:
 
 # AI / Ollama Settings
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5:7b')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5:3b')
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -149,8 +149,8 @@ LOGIN_URL = '/login/'
 
 # Ollama (Bookie Chatbot)
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
-OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:7b')
-OLLAMA_TIMEOUT = float(os.environ.get('OLLAMA_TIMEOUT', '20'))
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:3b')
+OLLAMA_TIMEOUT = float(os.environ.get('OLLAMA_TIMEOUT', '60'))
 OLLAMA_CONTEXT_TURNS = int(os.environ.get('OLLAMA_CONTEXT_TURNS', '6'))
 OLLAMA_MAX_TOKENS = int(os.environ.get('OLLAMA_MAX_TOKENS', '256'))
 OLLAMA_TEMPERATURE = float(os.environ.get('OLLAMA_TEMPERATURE', '0.2'))

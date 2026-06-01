@@ -13,6 +13,7 @@ from django.utils import timezone
 from books.models import Book, Category, Coupon, Order, OrderItem, ReadingProgress
 from django.contrib.auth import get_user_model
 from books.category_utils import normalize_category_name
+from books.ollama_client import OllamaError
 
 User = get_user_model()
 
@@ -34,6 +35,19 @@ class FakeChatbot:
                 yield "ok"
 
         return Client()
+
+
+class FakeBrokenStreamChatbot(FakeChatbot):
+    @property
+    def _client(self):
+        class Client:
+            def stream_generate(self, prompt):
+                if False:
+                    yield ""
+                raise OllamaError("Ollama timeout")
+
+        return Client()
+
 
 class BasicFlowTest(TestCase):
     def setUp(self):
@@ -303,6 +317,19 @@ class BasicFlowTest(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 429)
+
+    def test_chatbot_stream_returns_fallback_when_ollama_fails(self):
+        with patch("books.views._build_chatbot", return_value=FakeBrokenStreamChatbot()):
+            response = self.client.post(
+                reverse("api_chatbot_stream"),
+                data=json.dumps({"message": "hello"}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = b"".join(response.streaming_content).decode("utf-8")
+        self.assertIn("Bookie", body)
+        self.assertIn('"type": "final"', body)
 
 
 class CategoryNormalizationTest(TestCase):
