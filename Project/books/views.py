@@ -1012,7 +1012,7 @@ def _get_book_sentiment_summary(book):
 
 def _get_user_reading_dna(user):
     """Analyze user's reading preferences and build a 'Reading DNA' profile."""
-    orders = OrderItem.objects.filter(order__user=user).select_related("book__category")
+    orders = OrderItem.objects.filter(order__user=user).select_related("book__category", "order")
     ratings = Rating.objects.filter(user=user).select_related("book__category")
 
     if not orders.exists() and not ratings.exists():
@@ -1029,14 +1029,41 @@ def _get_user_reading_dna(user):
         if r.book.category and r.score >= 4:
             cat_counter[r.book.category.name] += r.score - 2  # weight by score
 
+    top_categories = cat_counter.most_common(6)
+    chart_categories = cat_counter.most_common(5)
+    dna["chart_categories"] = {
+        "labels": json.dumps([name for name, _ in chart_categories] or ["Chua co du lieu"]),
+        "values": json.dumps([count for _, count in chart_categories] or [0]),
+    }
+
     if cat_counter:
         total_cat = sum(cat_counter.values())
         dna["categories"] = [
             {"name": name, "count": count, "pct": round(count / total_cat * 100)}
-            for name, count in cat_counter.most_common(6)
+            for name, count in top_categories
         ]
     else:
         dna["categories"] = []
+
+    now = timezone.localtime()
+    trend_keys = []
+    for offset in range(5, -1, -1):
+        month = now.month - offset
+        year = now.year
+        while month <= 0:
+            month += 12
+            year -= 1
+        trend_keys.append((year, month))
+    trend_counts = {key: 0 for key in trend_keys}
+    for item in orders:
+        created_at = timezone.localtime(item.order.created_at)
+        key = (created_at.year, created_at.month)
+        if key in trend_counts:
+            trend_counts[key] += item.quantity
+    dna["chart_trend"] = {
+        "labels": json.dumps([f"{month:02d}/{year}" for year, month in trend_keys]),
+        "values": json.dumps([trend_counts[key] for key in trend_keys]),
+    }
 
     # Favorite authors
     author_counter = Counter()
@@ -1091,6 +1118,11 @@ def _get_user_reading_dna(user):
     else:
         dna["reading_mood"] = "Newcomer"
 
+    top_cat_label = dna["categories"][0]["name"] if dna["categories"] else "nhieu the loai moi"
+    dna["ai_insight"] = (
+        f"Ban dang co phong cach {dna['reading_mood']} voi xu huong noi bat ve {top_cat_label}. "
+        "Hay tiep tuc danh gia va mua sach de Bookie goi y ngay cang dung gu hon."
+    )
     dna["milestones"] = _get_user_milestones(user, dna)
     return dna
 

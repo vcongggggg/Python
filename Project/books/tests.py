@@ -150,6 +150,21 @@ class BasicFlowTest(TestCase):
             with self.subTest(name=name):
                 self.assertTrue(reverse(name, args=args).startswith("/"))
 
+    def test_reading_dna_supplies_chart_and_insight_context(self):
+        order = Order.objects.create(user=self.user)
+        OrderItem.objects.create(order=order, book=self.book, quantity=2, price=self.book.price)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("reading_dna"))
+        self.assertEqual(response.status_code, 200)
+        dna = response.context["dna"]
+        self.assertIn("chart_categories", dna)
+        self.assertIn("chart_trend", dna)
+        self.assertTrue(dna["ai_insight"])
+        self.assertTrue(dna["chart_categories"]["labels"].startswith("["))
+        self.assertTrue(dna["chart_trend"]["values"].startswith("["))
+        self.assertContains(response, "radarChart")
+
     def test_order_detail_links_invoice_pdf(self):
         order = Order.objects.create(user=self.user, shipping_address="123 Test Street")
         OrderItem.objects.create(order=order, book=self.book, quantity=2, price=self.book.price)
