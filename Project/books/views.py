@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, F, Q, Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse, StreamingHttpResponse
@@ -1749,6 +1750,37 @@ def _build_chatbot(request) -> BookieChatbot:
     )
 
 
+def _chatbot_rate_limit_response(request):
+    limit = int(getattr(settings, "CHATBOT_RATE_LIMIT_REQUESTS", 20))
+    window = int(getattr(settings, "CHATBOT_RATE_LIMIT_WINDOW", 60))
+    if limit <= 0 or window <= 0:
+        return None
+
+    if request.user.is_authenticated:
+        actor = f"user:{request.user.pk}"
+    else:
+        actor = f"ip:{request.META.get('REMOTE_ADDR', 'unknown')}"
+    key = f"chatbot_rate:{actor}"
+
+    if cache.add(key, 1, timeout=window):
+        return None
+    try:
+        count = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=window)
+        return None
+
+    if count > limit:
+        return JsonResponse(
+            {
+                "error": "Bạn gửi yêu cầu quá nhanh. Vui lòng thử lại sau ít phút.",
+                "retry_after": window,
+            },
+            status=429,
+        )
+    return None
+
+
 def _stream_chat_payload(payload_or_generator, is_real_stream=False, chunk_size: int = 24) -> Iterable[bytes]:
     yield json.dumps({"type": "start"}, ensure_ascii=False).encode("utf-8") + b"\n"
     if is_real_stream:
@@ -1791,6 +1823,9 @@ def api_chatbot(request) -> JsonResponse:
     """API for Bookie Chatbot."""
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
+    limited = _chatbot_rate_limit_response(request)
+    if limited:
+        return limited
     
     try:
         data = json.loads(request.body)
@@ -1872,6 +1907,9 @@ def api_chatbot_stream(request) -> HttpResponse:
     """True Streaming API for Bookie Chatbot (NDJSON)."""
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
+    limited = _chatbot_rate_limit_response(request)
+    if limited:
+        return limited
 
     try:
         data = json.loads(request.body)

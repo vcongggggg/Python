@@ -155,3 +155,7 @@ OLLAMA_CONTEXT_TURNS = int(os.environ.get('OLLAMA_CONTEXT_TURNS', '6'))
 OLLAMA_MAX_TOKENS = int(os.environ.get('OLLAMA_MAX_TOKENS', '256'))
 OLLAMA_TEMPERATURE = float(os.environ.get('OLLAMA_TEMPERATURE', '0.2'))
 OLLAMA_NUM_CTX = int(os.environ.get('OLLAMA_NUM_CTX', '2048'))
+
+# Chatbot API protection
+CHATBOT_RATE_LIMIT_REQUESTS = int(os.environ.get('CHATBOT_RATE_LIMIT_REQUESTS', '20'))
+CHATBOT_RATE_LIMIT_WINDOW = int(os.environ.get('CHATBOT_RATE_LIMIT_WINDOW', '60'))

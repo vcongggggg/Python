@@ -1,14 +1,37 @@
 import json
+from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import TestCase, Client
+from django.test.utils import override_settings
 from django.urls import reverse
 from books.models import Book, Category, Order, OrderItem, ReadingProgress
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
+class FakeChatbot:
+    def get_response(self, user_message, history, last_books):
+        return {"text": "ok", "type": "text"}
+
+    def prepare_stream_context(self, user_message):
+        return []
+
+    def build_prompt(self, user_message, history, found_books):
+        return "prompt"
+
+    @property
+    def _client(self):
+        class Client:
+            def stream_generate(self, prompt):
+                yield "ok"
+
+        return Client()
+
 class BasicFlowTest(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.category = Category.objects.create(name="IT")
         self.book = Book.objects.create(
@@ -126,3 +149,39 @@ class BasicFlowTest(TestCase):
         for name, args in names:
             with self.subTest(name=name):
                 self.assertTrue(reverse(name, args=args).startswith("/"))
+
+    @override_settings(CHATBOT_RATE_LIMIT_REQUESTS=1, CHATBOT_RATE_LIMIT_WINDOW=60)
+    def test_chatbot_api_rate_limits_repeated_requests(self):
+        with patch("books.views._build_chatbot", return_value=FakeChatbot()) as build_bot:
+            response = self.client.post(
+                reverse("api_chatbot"),
+                data=json.dumps({"message": "hello"}),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+            response = self.client.post(
+                reverse("api_chatbot"),
+                data=json.dumps({"message": "hello again"}),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 429)
+            self.assertIn("retry_after", response.json())
+            self.assertEqual(build_bot.call_count, 1)
+
+    @override_settings(CHATBOT_RATE_LIMIT_REQUESTS=1, CHATBOT_RATE_LIMIT_WINDOW=60)
+    def test_chatbot_stream_uses_same_rate_limit(self):
+        with patch("books.views._build_chatbot", return_value=FakeChatbot()):
+            response = self.client.post(
+                reverse("api_chatbot"),
+                data=json.dumps({"message": "hello"}),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            reverse("api_chatbot_stream"),
+            data=json.dumps({"message": "stream please"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 429)
