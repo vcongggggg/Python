@@ -10,8 +10,9 @@ from typing import Any, Iterable
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.models import Group
 from django.core.cache import cache
 from django.core.paginator import Paginator
@@ -886,6 +887,20 @@ def profile_edit(request):
     return render(request, "books/profile_edit.html", {"form": form})
 
 
+@login_required
+def profile_change_password(request):
+    if request.method == "POST":
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "Đã đổi mật khẩu thành công.")
+            return redirect("profile")
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, "books/profile_change_password.html", {"form": form})
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Live Search API
 # ═══════════════════════════════════════════════════════════════════
@@ -1412,6 +1427,25 @@ def dashboard_users(request: HttpRequest) -> HttpResponse:
         request,
         "books/dashboard_users.html",
         {"users": user_rows, "query": query, "role_choices": ROLE_CHOICES},
+    )
+
+
+@staff_member_required
+def dashboard_user_detail(request: HttpRequest, pk: int) -> HttpResponse:
+    if not _require_perm(request, "auth.view_user", "dashboard"):
+        return redirect("dashboard")
+    target = get_object_or_404(User, pk=pk)
+    return render(
+        request,
+        "books/dashboard_user_detail.html",
+        {
+            "profile_user": target,
+            "primary_role": primary_role(target),
+            "orders": target.orders.prefetch_related("items__book").order_by("-created_at")[:10],
+            "wishlist_items": target.wishlist_items.select_related("book").order_by("-added_at")[:10],
+            "ratings": target.ratings.select_related("book").order_by("-created_at")[:10],
+            "reading_progress": target.reading_progress.select_related("book").order_by("-last_read_at")[:10],
+        },
     )
 
 

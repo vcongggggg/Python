@@ -237,6 +237,7 @@ class BasicFlowTest(TestCase):
     def test_dashboard_urls_reverse(self):
         names = [
             ("dashboard_users", []),
+            ("dashboard_user_detail", [self.user.id]),
             ("dashboard_user_set_role", [self.user.id]),
             ("dashboard_books", []),
             ("dashboard_book_create", []),
@@ -398,6 +399,20 @@ class BasicFlowTest(TestCase):
         self.assertIn("Python Web", body)
         self.assertIn('"type": "books"', body)
 
+    def test_profile_change_password_updates_login_credentials(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("profile_change_password"),
+            data={
+                "old_password": "password123",
+                "new_password1": "new-password-456",
+                "new_password2": "new-password-456",
+            },
+        )
+        self.assertRedirects(response, reverse("profile"))
+        self.client.logout()
+        self.assertTrue(self.client.login(username="testuser", password="new-password-456"))
+
 
 class CategoryNormalizationTest(TestCase):
     def test_normalize_category_name_uses_vietnamese_display_names(self):
@@ -499,6 +514,12 @@ class RBACTest(TestCase):
 
         response = self.client.get(reverse("dashboard_users"))
         self.assertEqual(response.status_code, 302)
+
+    def test_admin_can_view_user_profile_detail(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("dashboard_user_detail", args=[self.customer.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.customer.username)
 
     def test_support_can_view_orders_and_change_status(self):
         order = Order.objects.create(user=self.customer, shipping_address="123 Test Street")

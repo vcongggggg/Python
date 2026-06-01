@@ -28,6 +28,7 @@ urlpatterns = [
     path("wishlist/remove/<int:book_id>/", views.wishlist_remove, name="wishlist_remove"),
     path("profile/", views.profile, name="profile"),
     path("profile/edit/", views.profile_edit, name="profile_edit"),
+    path("profile/password/", views.profile_change_password, name="profile_change_password"),
     path("profile/reading-dna/", views.reading_dna, name="reading_dna"),
     path("books/<int:pk>/read/", views.read_book, name="read_book"),
     path("api/v1/books/<int:pk>/progress/", views.api_save_reading_progress, name="api_save_reading_progress"),
@@ -36,6 +37,7 @@ urlpatterns = [
     # Admin dashboard
     path("dashboard/", views.dashboard, name="dashboard"),
     path("dashboard/users/", views.dashboard_users, name="dashboard_users"),
+    path("dashboard/users/<int:pk>/", views.dashboard_user_detail, name="dashboard_user_detail"),
     path("dashboard/users/<int:pk>/role/", views.dashboard_user_set_role, name="dashboard_user_set_role"),
     path("dashboard/users/<int:pk>/toggle-staff/", views.dashboard_user_toggle_staff, name="dashboard_user_toggle_staff"),
     path("dashboard/users/<int:pk>/toggle-active/", views.dashboard_user_toggle_active, name="dashboard_user_toggle_active"),
