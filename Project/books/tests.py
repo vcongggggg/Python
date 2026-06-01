@@ -2,7 +2,7 @@ import json
 
 from django.test import TestCase, Client
 from django.urls import reverse
-from books.models import Book, Category, Order
+from books.models import Book, Category, Order, OrderItem, ReadingProgress
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -48,6 +48,66 @@ class BasicFlowTest(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
+        progress = ReadingProgress.objects.get(user=self.user, book=self.book)
+        self.assertEqual(progress.last_page, 2)
+        self.assertTrue(progress.is_finished)
+
+    def test_reader_redirects_for_non_digital_book(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("read_book", args=[self.book.id]))
+        self.assertRedirects(response, reverse("book_detail", args=[self.book.id]))
+
+    def test_paid_digital_book_is_preview_until_purchased(self):
+        self.book.is_digital = True
+        self.book.content_text = "\n\n".join([f"Trang {i}" for i in range(1, 11)])
+        self.book.price = 100
+        self.book.save(update_fields=["is_digital", "content_text", "price"])
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("read_book", args=[self.book.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["is_preview"])
+
+        order = Order.objects.create(user=self.user)
+        OrderItem.objects.create(
+            order=order,
+            book=self.book,
+            quantity=1,
+            price=self.book.price,
+            is_digital_purchase=True,
+        )
+        response = self.client.get(reverse("read_book", args=[self.book.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["is_preview"])
+
+    def test_digital_checkout_marks_purchase_without_decreasing_stock(self):
+        self.book.is_digital = True
+        self.book.content_text = "Trang 1"
+        self.book.stock = 10
+        self.book.save(update_fields=["is_digital", "content_text", "stock"])
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("add_to_cart", args=[self.book.id]),
+            data={"format": "digital", "quantity": "5"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session["cart"][f"{self.book.id}_digital"], 1)
+
+        response = self.client.post(
+            reverse("checkout"),
+            data={
+                "shipping_address": "123 Test Street",
+                "note": "",
+                "coupon_code": "",
+                "payment_method": "cod",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        item = OrderItem.objects.get(book=self.book)
+        self.assertTrue(item.is_digital_purchase)
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.stock, 10)
 
     def test_dashboard_urls_reverse(self):
         names = [
