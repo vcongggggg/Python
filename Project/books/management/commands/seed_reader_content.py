@@ -1,23 +1,62 @@
 import requests
 from django.core.management.base import BaseCommand
+from time import sleep
 
 from books.category_utils import normalize_category_name
 from books.models import Book, Category
 
 
+def get_with_retries(url, timeout, retries):
+    last_error = None
+    for attempt in range(1, retries + 1):
+        try:
+            response = requests.get(url, timeout=timeout)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < retries:
+                sleep(1)
+    raise last_error
+
+
 class Command(BaseCommand):
     help = "Seeds digital books from Project Gutenberg"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--limit",
+            type=int,
+            default=10,
+            help="So sach toi da can lay tu Gutendex.",
+        )
+        parser.add_argument(
+            "--timeout",
+            type=int,
+            default=40,
+            help="So giay cho moi request toi Gutendex/Project Gutenberg.",
+        )
+        parser.add_argument(
+            "--retries",
+            type=int,
+            default=3,
+            help="So lan thu lai khi API bi timeout hoac loi mang.",
+        )
+
     def handle(self, *args, **kwargs):
+        limit = max(1, kwargs["limit"])
+        timeout = max(5, kwargs["timeout"])
+        retries = max(1, kwargs["retries"])
+
         self.stdout.write(self.style.SUCCESS("Dang bat dau keo sach tu Project Gutenberg..."))
 
         category, _ = Category.objects.get_or_create(name=normalize_category_name("Kinh điển"))
         api_url = "https://gutendex.com/books/?languages=en&topic=fiction"
 
         try:
-            response = requests.get(api_url, timeout=20)
+            response = get_with_retries(api_url, timeout=timeout, retries=retries)
             data = response.json()
-            books_data = data.get("results", [])[:10]
+            books_data = data.get("results", [])[:limit]
 
             for b_data in books_data:
                 title = b_data.get("title")
@@ -37,7 +76,7 @@ class Command(BaseCommand):
                     continue
 
                 try:
-                    content_res = requests.get(text_url, timeout=15)
+                    content_res = get_with_retries(text_url, timeout=timeout, retries=retries)
                     content_text = content_res.text
                     cover_url = b_data["formats"].get("image/jpeg")
 
@@ -54,10 +93,15 @@ class Command(BaseCommand):
                     )
                     self.stdout.write(self.style.SUCCESS(f"Da them thanh cong: {title}"))
 
-                except Exception as e:
+                except requests.RequestException as e:
                     self.stdout.write(self.style.ERROR(f"Loi khi tai noi dung {title}: {str(e)}"))
 
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Loi khi goi API Gutendex: {str(e)}"))
+        except requests.RequestException as e:
+            self.stdout.write(
+                self.style.ERROR(
+                    "Gutendex dang cham hoac loi mang. "
+                    f"Hay thu lai sau, hoac tang --timeout. Chi tiet: {str(e)}"
+                )
+            )
 
         self.stdout.write(self.style.SUCCESS("--- Hoan tat qua trinh seed du lieu ---"))

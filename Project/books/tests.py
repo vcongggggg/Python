@@ -1,7 +1,9 @@
 import json
+import io
 from datetime import timedelta
 from unittest.mock import patch
 
+import requests
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase, Client
@@ -353,3 +355,21 @@ class CategoryNormalizationTest(TestCase):
         self.assertEqual(fiction_book.category.name, "Văn học")
         self.assertEqual(existing_book.category.name, "Văn học")
         self.assertEqual(programming_book.category.name, "Lập trình")
+
+
+class SeedReaderContentCommandTest(TestCase):
+    @patch("books.management.commands.seed_reader_content.requests.get")
+    def test_seed_reader_content_handles_gutendex_timeout(self, mock_get):
+        mock_get.side_effect = requests.Timeout("read timeout")
+        output = io.StringIO()
+
+        call_command(
+            "seed_reader_content",
+            timeout=5,
+            retries=1,
+            stdout=output,
+        )
+
+        self.assertIn("Gutendex dang cham hoac loi mang", output.getvalue())
+        self.assertEqual(Book.objects.count(), 0)
+        self.assertTrue(Category.objects.filter(name="Kinh điển").exists())
