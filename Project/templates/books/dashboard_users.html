@@ -1,78 +1,94 @@
 {% extends "base.html" %}
-{% block title %}Quan ly nguoi dung - Smart Bookstore{% endblock %}
+{% block title %}Quản lý người dùng - Bookie{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
         <h1 class="fw-bold mb-1" style="font-size:1.6rem">
-            <i class="bi bi-people me-2" style="color:var(--primary)"></i>Quan ly nguoi dung
+            <i class="bi bi-people me-2" style="color:var(--primary)"></i>Quản lý người dùng
         </h1>
-        <div class="text-muted" style="font-size:.9rem">Chi nguoi co quyen moi co the thay doi quyen va khoa tai khoan.</div>
+        <div class="text-muted" style="font-size:.9rem">Gán 5 role vận hành: Customer, Staff, Manager, Support, Admin.</div>
     </div>
-    <a href="{% url 'dashboard' %}" class="btn btn-glass btn-sm"><i class="bi bi-speedometer2 me-1"></i>Ve dashboard</a>
+    <a href="{% url 'dashboard' %}" class="btn btn-glass btn-sm"><i class="bi bi-speedometer2 me-1"></i>Về dashboard</a>
 </div>
 
 <form method="get" class="mb-3">
-    <div class="input-group" style="max-width:420px;">
+    <div class="input-group" style="max-width:460px;">
         <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input type="text" name="q" class="form-control" placeholder="Tim username/email..." value="{{ query }}" />
-        <button class="btn btn-glass" type="submit">Tim</button>
+        <input type="text" name="q" class="form-control" placeholder="Tìm username, email, họ tên..." value="{{ query }}" />
+        <button class="btn btn-glass" type="submit">Tìm</button>
     </div>
 </form>
 
 <div class="white-panel">
     <div class="table-responsive">
-        <table class="table table-sm mb-0" style="font-size:.9rem">
+        <table class="table table-sm align-middle mb-0" style="font-size:.9rem">
             <thead>
                 <tr>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Ten</th>
+                    <th>Người dùng</th>
                     <th>Role</th>
-                    <th>Staff</th>
-                    <th>Superuser</th>
-                    <th>Active</th>
-                    <th>Ngay tao</th>
-                    <th class="text-end">Hanh dong</th>
+                    <th>Trạng thái</th>
+                    <th>Đơn</th>
+                    <th>Wishlist</th>
+                    <th>Rating</th>
+                    <th>Ngày tạo</th>
+                    <th class="text-end">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
                 {% for u in users %}
                 <tr>
-                    <td class="fw-semibold"><a href="{% url 'dashboard_user_detail' u.pk %}">{{ u.username }}</a></td>
-                    <td>{{ u.email|default:"-" }}</td>
-                    <td>{{ u.get_full_name|default:"-" }}</td>
                     <td>
-                        <span class="badge-category">{{ u.primary_role }}</span>
+                        <a class="fw-semibold" href="{% url 'dashboard_user_detail' u.pk %}">{{ u.username }}</a>
+                        <div class="text-muted small">{{ u.email|default:"Chưa có email" }}</div>
                     </td>
-                    <td>{% if u.is_staff %}<span class="badge-category" style="background:rgba(0,184,148,.15);color:#00B894">Yes</span>{% else %}<span class="badge-category">No</span>{% endif %}</td>
-                    <td>{% if u.is_superuser %}<span class="badge-category" style="background:rgba(108,92,231,.15);color:#6C5CE7">Yes</span>{% else %}<span class="badge-category">No</span>{% endif %}</td>
-                    <td>{% if u.is_active %}<span class="badge-category" style="background:rgba(253,203,110,.2);color:#E17055">Active</span>{% else %}<span class="badge-category" style="background:rgba(225,112,85,.15);color:#E17055">Locked</span>{% endif %}</td>
+                    <td>
+                        <span class="badge-category"
+                              {% if u.primary_role == "Admin" %}style="background:rgba(108,92,231,.15);color:#6C5CE7"
+                              {% elif u.primary_role == "Manager" %}style="background:rgba(0,184,148,.15);color:#00B894"
+                              {% elif u.primary_role == "Support" %}style="background:rgba(9,132,227,.15);color:#0984E3"
+                              {% elif u.primary_role == "Staff" %}style="background:rgba(253,203,110,.22);color:#B26A00"
+                              {% endif %}>{{ u.primary_role }}</span>
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                        <span class="badge-category" style="background:rgba(0,184,148,.15);color:#00B894">Active</span>
+                        {% else %}
+                        <span class="badge-category" style="background:rgba(225,112,85,.15);color:#E17055">Locked</span>
+                        {% endif %}
+                        {% if u.is_superuser %}<span class="badge-category" style="background:rgba(108,92,231,.12);color:#6C5CE7">Superuser</span>{% endif %}
+                    </td>
+                    <td>{{ u.orders.count }}</td>
+                    <td>{{ u.wishlist_items.count }}</td>
+                    <td>{{ u.ratings.count }}</td>
                     <td>{{ u.date_joined|date:"d/m/Y" }}</td>
                     <td class="text-end">
-                        <div class="d-flex gap-2 justify-content-end">
+                        <div class="d-flex gap-2 justify-content-end flex-wrap">
+                            <a class="btn btn-glass btn-sm" href="{% url 'dashboard_user_detail' u.pk %}">Hồ sơ</a>
                             {% if perms.auth.change_user %}
                             <form action="{% url 'dashboard_user_set_role' u.pk %}" method="post" class="d-flex gap-2">
                                 {% csrf_token %}
-                                <select name="role" class="form-select form-select-sm" style="width:130px">
+                                <select name="role" class="form-select form-select-sm" style="width:130px" {% if u.pk == request.user.pk or u.is_superuser %}disabled{% endif %}>
                                     {% for role in role_choices %}
                                     <option value="{{ role }}" {% if u.primary_role == role %}selected{% endif %}>{{ role }}</option>
                                     {% endfor %}
                                 </select>
-                                <button class="btn btn-glass btn-sm" type="submit">Set role</button>
+                                <button class="btn btn-glass btn-sm" type="submit" {% if u.pk == request.user.pk or u.is_superuser %}disabled{% endif %}>Lưu role</button>
                             </form>
                             <form action="{% url 'dashboard_user_toggle_active' u.pk %}" method="post">
                                 {% csrf_token %}
-                                <button class="btn btn-glass btn-sm" type="submit">Toggle active</button>
+                                <button class="btn btn-glass btn-sm" type="submit" {% if u.pk == request.user.pk or u.is_superuser %}disabled{% endif %}>
+                                    {% if u.is_active %}Khóa{% else %}Mở khóa{% endif %}
+                                </button>
                             </form>
                             {% else %}
-                            <span class="text-muted">Khong du quyen</span>
+                            <span class="text-muted">Không đủ quyền</span>
                             {% endif %}
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted">Khong co nguoi dung nao.</td>
+                    <td colspan="8" class="text-center text-muted">Không có người dùng nào.</td>
                 </tr>
                 {% endfor %}
             </tbody>
