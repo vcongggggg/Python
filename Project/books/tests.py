@@ -13,6 +13,7 @@ from django.utils import timezone
 from books.models import Book, Category, Coupon, Order, OrderItem, ReadingProgress
 from django.contrib.auth import get_user_model
 from books.category_utils import normalize_category_name
+from books.chatbot import BookieChatbot
 from books.ollama_client import OllamaError
 
 User = get_user_model()
@@ -21,6 +22,9 @@ User = get_user_model()
 class FakeChatbot:
     def get_response(self, user_message, history, last_books):
         return {"text": "ok", "type": "text"}
+
+    def get_catalog_response(self, user_message):
+        return None
 
     def prepare_stream_context(self, user_message):
         return []
@@ -47,6 +51,11 @@ class FakeBrokenStreamChatbot(FakeChatbot):
                 raise OllamaError("Ollama timeout")
 
         return Client()
+
+
+class FakeLLMClient:
+    def generate(self, prompt):
+        raise AssertionError("Catalog searches must not call the LLM")
 
 
 class BasicFlowTest(TestCase):
@@ -330,6 +339,62 @@ class BasicFlowTest(TestCase):
         body = b"".join(response.streaming_content).decode("utf-8")
         self.assertIn("Bookie", body)
         self.assertIn('"type": "final"', body)
+
+    def test_chatbot_catalog_search_returns_database_books_before_llm(self):
+        programming = Category.objects.create(name="Lập trình")
+        python_book = Book.objects.create(
+            title="Python Web",
+            author="Bookie",
+            price=150000,
+            category=programming,
+            description="Sách thực hành Python và Django.",
+        )
+        bot = BookieChatbot(user=self.user, client=FakeLLMClient(), max_turns=3)
+
+        response = bot.get_response("sách hay về python", [], None)
+
+        self.assertEqual(response["type"], "books")
+        self.assertEqual(response["books"][0]["id"], python_book.id)
+        self.assertIn("150,000", response["books"][0]["price"])
+
+    def test_chatbot_catalog_search_does_not_invent_missing_books(self):
+        Book.objects.create(
+            title="A Long Journey",
+            author="Bookie",
+            price=120000,
+            category=self.category,
+            description="A long classic adventure.",
+        )
+        bot = BookieChatbot(user=self.user, client=FakeLLMClient(), max_turns=3)
+
+        response = bot.get_response("có sách nào hay về khủng long ko", [], None)
+
+        self.assertEqual(response["type"], "text")
+        self.assertIn("chưa tìm thấy", response["text"])
+        self.assertNotIn("Khủng Long Trên Mặt Trăng", response["text"])
+
+    def test_chatbot_stream_uses_catalog_response_for_book_search(self):
+        programming = Category.objects.create(name="Lập trình")
+        Book.objects.create(
+            title="Python Web",
+            author="Bookie",
+            price=150000,
+            category=programming,
+            description="Sách thực hành Python và Django.",
+        )
+        bot = BookieChatbot(user=self.user, client=FakeLLMClient(), max_turns=3)
+
+        with patch("books.views._build_chatbot", return_value=bot):
+            response = self.client.post(
+                reverse("api_chatbot_stream"),
+                data=json.dumps({"message": "sách hay về python"}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = b"".join(response.streaming_content).decode("utf-8")
+        self.assertIn("Python Web", body)
+        self.assertIn('"type": "books"', body)
 
 
 class CategoryNormalizationTest(TestCase):

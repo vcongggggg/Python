@@ -2016,6 +2016,30 @@ def api_chatbot_stream(request) -> HttpResponse:
 
         history = _get_chat_history(request)
         bot = _build_chatbot(request)
+        catalog_response = bot.get_catalog_response(user_message)
+        if catalog_response:
+            updated = _append_chat_history(
+                request,
+                history,
+                "user",
+                user_message,
+                settings.OLLAMA_CONTEXT_TURNS,
+            )
+            _append_chat_history(
+                request,
+                updated,
+                "assistant",
+                catalog_response.get("text", ""),
+                settings.OLLAMA_CONTEXT_TURNS,
+            )
+            if catalog_response.get("type") == "books":
+                _set_last_books(request, catalog_response.get("books", []))
+            request.session.save()
+            return StreamingHttpResponse(
+                _stream_chat_payload(catalog_response),
+                content_type="application/x-ndjson",
+            )
+
         found_books = bot.prepare_stream_context(user_message)
         prompt = bot.build_prompt(user_message, history, found_books)
         stream_gen = bot._client.stream_generate(prompt)
