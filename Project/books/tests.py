@@ -105,6 +105,18 @@ class BasicFlowTest(TestCase):
         self.assertEqual(progress.last_page, 2)
         self.assertTrue(progress.is_finished)
 
+    def test_digital_book_detail_shows_read_button(self):
+        self.book.is_digital = True
+        self.book.content_text = "Trang 1"
+        self.book.price = 0
+        self.book.save(update_fields=["is_digital", "content_text", "price"])
+
+        response = self.client.get(reverse("book_detail", args=[self.book.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("read_book", args=[self.book.id]))
+        self.assertContains(response, "Đọc sách")
+
     def test_reader_redirects_for_non_digital_book(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("read_book", args=[self.book.id]))

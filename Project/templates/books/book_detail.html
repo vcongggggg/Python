@@ -74,8 +74,11 @@
                         {% endif %}
                     </div>
 
-                    <!-- Nút mua E-book -->
                     {% if book.is_digital %}
+                    <a href="{% url 'read_book' book.pk %}" class="btn btn-gradient">
+                        <i class="bi bi-book-half me-1"></i>Đọc sách
+                    </a>
+                    {% if book.price > 0 %}
                     <div class="digital-buy-box">
                         <form action="{% url 'add_to_cart' book.pk %}" method="post" class="ajax-form m-0 p-0">
                             {% csrf_token %}
@@ -86,10 +89,11 @@
                             </button>
                         </form>
                     </div>
-                    <!-- Nút đọc luôn (Dành cho sách miễn phí hoặc đã mua) -->
-                    <a href="{% url 'read_book' book.pk %}" class="btn btn-outline-light rounded-pill px-3">
-                        <i class="bi bi-book-half me-1"></i>Đọc thử
-                    </a>
+                    {% else %}
+                    <span class="badge-category" style="background:rgba(0,184,148,.15);color:#00B894">
+                        <i class="bi bi-unlock me-1"></i>Ebook miễn phí
+                    </span>
+                    {% endif %}
                     {% endif %}
 
                     <!-- Wishlist -->
