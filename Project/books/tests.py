@@ -16,7 +16,7 @@ from django.contrib.auth.models import Group
 from books.category_utils import normalize_category_name
 from books.chatbot import BookieChatbot
 from books.ollama_client import OllamaError
-from books.views import _split_reader_pages
+from books.views import _sanitize_reader_html, _split_reader_pages
 
 User = get_user_model()
 
@@ -136,6 +136,24 @@ class BasicFlowTest(TestCase):
         self.assertGreater(response.context["total_pages"], 1)
         self.assertContains(response, "body.reader-mode")
         self.assertContains(response, "reader-panel")
+
+    def test_reader_renders_sanitized_html_with_images(self):
+        self.book.is_digital = True
+        self.book.content_html = _sanitize_reader_html(
+            "<h1>Chapter</h1><p>Hello <strong>reader</strong></p>"
+            "<img src='images/pic.jpg' alt='Plate 1'>"
+            "<script>alert('x')</script>",
+            base_url="https://www.gutenberg.org/files/1/1-h/1-h.htm",
+        )
+        self.book.save(update_fields=["is_digital", "content_html"])
+
+        response = self.client.get(reverse("read_book", args=[self.book.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["reader_content_format"], "html")
+        self.assertContains(response, "https://www.gutenberg.org/files/1/1-h/images/pic.jpg")
+        self.assertContains(response, "Plate 1")
+        self.assertNotContains(response, "alert('x')")
 
     def test_digital_book_detail_shows_read_button(self):
         self.book.is_digital = True

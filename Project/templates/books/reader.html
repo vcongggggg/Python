@@ -146,6 +146,31 @@
     .reader-page-content p:last-child {
         margin-bottom: 0;
     }
+    .reader-page-content img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        margin: 1.25rem auto;
+        border-radius: 8px;
+        box-shadow: 0 14px 38px rgba(45,42,38,.14);
+    }
+    .reader-page-content figure {
+        margin: 1.5rem 0;
+    }
+    .reader-page-content figcaption {
+        color: var(--reader-muted);
+        font-family: Manrope, system-ui, sans-serif;
+        font-size: .9rem;
+        text-align: center;
+        margin-top: .65rem;
+    }
+    .reader-page-content h1,
+    .reader-page-content h2,
+    .reader-page-content h3,
+    .reader-page-content h4 {
+        margin: 0 0 1rem;
+        line-height: 1.2;
+    }
     .reader-page-kicker {
         color: var(--reader-muted);
         font-size: .78rem;
@@ -421,6 +446,7 @@
 <script>
     const pages = {{ pages|safe }};
     const canSaveProgress = {{ can_save_progress|yesno:"true,false" }};
+    const readerContentFormat = "{{ reader_content_format|escapejs }}";
     const bookId = {{ book.pk }};
 
     let displayPages = pages.slice();
@@ -482,6 +508,10 @@
         });
     }
 
+    function renderHtmlPage(html) {
+        contentEl.innerHTML = html;
+    }
+
     function saveProgress() {
         localStorage.setItem(progressKey, currentPage);
         if (!canSaveProgress) return;
@@ -533,7 +563,11 @@
     function updateUI() {
         const page = displayPages[currentPage - 1] || "";
         kickerEl.textContent = `Trang ${currentPage}`;
-        renderTextPage(page);
+        if (readerContentFormat === "html") {
+            renderHtmlPage(page);
+        } else {
+            renderTextPage(page);
+        }
 
         const pct = Math.round((currentPage / totalPages) * 100);
         progressBar.style.width = `${pct}%`;

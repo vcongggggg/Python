@@ -27,6 +27,7 @@ class Book(models.Model):
     # New fields for E-reader
     is_digital = models.BooleanField(default=False, help_text="Có hỗ trợ đọc trực tuyến không")
     content_text = models.TextField(blank=True, help_text="Nội dung sách (Text)")
+    content_html = models.TextField(blank=True, help_text="Nội dung sách dạng HTML đã lọc, có thể chứa ảnh minh họa")
     
     created_at = models.DateTimeField(default=timezone.now)
 

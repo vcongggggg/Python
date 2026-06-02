@@ -88,6 +88,7 @@ class BookAdminForm(forms.ModelForm):
             "stock",
             "is_digital",
             "content_text",
+            "content_html",
         )
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control"}),
@@ -101,6 +102,7 @@ class BookAdminForm(forms.ModelForm):
             "stock": forms.NumberInput(attrs={"class": "form-control"}),
             "is_digital": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "content_text": forms.Textarea(attrs={"class": "form-control", "rows": 6}),
+            "content_html": forms.Textarea(attrs={"class": "form-control", "rows": 6}),
         }
 
 
