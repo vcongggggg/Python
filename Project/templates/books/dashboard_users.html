@@ -51,9 +51,9 @@
                     </td>
                     <td>
                         {% if u.is_active %}
-                        <span class="badge-category" style="background:rgba(0,184,148,.15);color:#00B894">Active</span>
+                        <span class="badge-category" style="background:rgba(0,184,148,.15);color:#00B894">Đang hoạt động</span>
                         {% else %}
-                        <span class="badge-category" style="background:rgba(225,112,85,.15);color:#E17055">Locked</span>
+                        <span class="badge-category" style="background:rgba(225,112,85,.15);color:#E17055">Đã khóa</span>
                         {% endif %}
                         {% if u.is_superuser %}<span class="badge-category" style="background:rgba(108,92,231,.12);color:#6C5CE7">Superuser</span>{% endif %}
                     </td>
@@ -63,7 +63,7 @@
                     <td>{{ u.date_joined|date:"d/m/Y" }}</td>
                     <td class="text-end">
                         <div class="d-flex gap-2 justify-content-end flex-wrap">
-                            <a class="btn btn-glass btn-sm" href="{% url 'dashboard_user_detail' u.pk %}">Hồ sơ</a>
+                            <a class="btn btn-glass btn-sm" href="{% url 'dashboard_user_detail' u.pk %}"><i class="bi bi-person-vcard me-1"></i>Hồ sơ</a>
                             {% if perms.auth.change_user %}
                             <form action="{% url 'dashboard_user_set_role' u.pk %}" method="post" class="d-flex gap-2">
                                 {% csrf_token %}
@@ -88,7 +88,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted">Không có người dùng nào.</td>
+                    <td colspan="8" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>Không có người dùng nào.</td>
                 </tr>
                 {% endfor %}
             </tbody>

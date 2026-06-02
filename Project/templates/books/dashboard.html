@@ -5,27 +5,27 @@
     <h1 class="fw-bold mb-0" style="font-size:1.75rem">
         <i class="bi bi-speedometer2 me-2" style="color:var(--primary)"></i>Dashboard
     </h1>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         {% if perms.auth.view_user %}
-        <a href="{% url 'dashboard_users' %}" class="btn btn-glass btn-sm"><i class="bi bi-people me-1"></i>Quan ly nguoi dung</a>
+        <a href="{% url 'dashboard_users' %}" class="btn btn-glass btn-sm"><i class="bi bi-people me-1"></i>Quản lý người dùng</a>
         {% endif %}
         {% if perms.books.view_book %}
-        <a href="{% url 'dashboard_books' %}" class="btn btn-glass btn-sm"><i class="bi bi-book me-1"></i>Quan ly sach</a>
+        <a href="{% url 'dashboard_books' %}" class="btn btn-glass btn-sm"><i class="bi bi-book me-1"></i>Quản lý sách</a>
         {% endif %}
         {% if perms.books.view_order %}
-        <a href="{% url 'dashboard_orders' %}" class="btn btn-glass btn-sm"><i class="bi bi-receipt me-1"></i>Don hang</a>
+        <a href="{% url 'dashboard_orders' %}" class="btn btn-glass btn-sm"><i class="bi bi-receipt me-1"></i>Đơn hàng</a>
         {% endif %}
         {% if perms.books.view_coupon %}
-        <a href="{% url 'dashboard_coupons' %}" class="btn btn-glass btn-sm"><i class="bi bi-ticket-perforated me-1"></i>Ma giam gia</a>
+        <a href="{% url 'dashboard_coupons' %}" class="btn btn-glass btn-sm"><i class="bi bi-ticket-perforated me-1"></i>Mã giảm giá</a>
         {% endif %}
         {% if perms.books.view_adminauditlog %}
         <a href="{% url 'dashboard_audit_logs' %}" class="btn btn-glass btn-sm"><i class="bi bi-shield-check me-1"></i>Audit log</a>
         {% endif %}
         {% if perms.books.view_order %}
-        <a href="{% url 'export_orders_csv' %}" class="btn btn-glass btn-sm"><i class="bi bi-download me-1"></i>Export Orders CSV</a>
+        <a href="{% url 'export_orders_csv' %}" class="btn btn-glass btn-sm"><i class="bi bi-download me-1"></i>Xuất đơn hàng CSV</a>
         {% endif %}
         {% if perms.books.view_book %}
-        <a href="{% url 'export_books_csv' %}" class="btn btn-glass btn-sm"><i class="bi bi-download me-1"></i>Export Books CSV</a>
+        <a href="{% url 'export_books_csv' %}" class="btn btn-glass btn-sm"><i class="bi bi-download me-1"></i>Xuất sách CSV</a>
         {% endif %}
     </div>
 </div>
@@ -41,19 +41,19 @@
     <div class="col-6 col-lg-3 fade-up">
         <div class="white-panel text-center py-3">
             <div style="font-size:2rem;font-weight:800;background:var(--gradient-2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">{{ total_orders }}</div>
-            <div style="color:var(--text-muted);font-size:.85rem">Don hang</div>
+            <div style="color:var(--text-muted);font-size:.85rem">Đơn hàng</div>
         </div>
     </div>
     <div class="col-6 col-lg-3 fade-up">
         <div class="white-panel text-center py-3">
             <div style="font-size:2rem;font-weight:800;background:var(--gradient-3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">{{ total_users }}</div>
-            <div style="color:var(--text-muted);font-size:.85rem">Nguoi dung</div>
+            <div style="color:var(--text-muted);font-size:.85rem">Người dùng</div>
         </div>
     </div>
     <div class="col-6 col-lg-3 fade-up">
         <div class="white-panel text-center py-3">
             <div style="font-size:2rem;font-weight:800;color:var(--accent2)">{{ total_books }}</div>
-            <div style="color:var(--text-muted);font-size:.85rem">Sach</div>
+            <div style="color:var(--text-muted);font-size:.85rem">Sách</div>
         </div>
     </div>
 </div>
@@ -62,13 +62,13 @@
 <div class="row g-4 mb-4">
     <div class="col-lg-8 fade-up">
         <div class="white-panel">
-            <h5 class="fw-bold mb-3"><i class="bi bi-graph-up me-2" style="color:var(--primary)"></i>Doanh thu theo thang</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-graph-up me-2" style="color:var(--primary)"></i>Doanh thu theo tháng</h5>
             <canvas id="revenueChart" height="280"></canvas>
         </div>
     </div>
     <div class="col-lg-4 fade-up">
         <div class="white-panel">
-            <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart me-2" style="color:var(--accent)"></i>Phan bo the loai</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart me-2" style="color:var(--accent)"></i>Phân bổ thể loại</h5>
             <canvas id="categoryChart" height="280"></canvas>
         </div>
     </div>
@@ -77,13 +77,13 @@
 <div class="row g-4 mb-4">
     <div class="col-lg-6 fade-up">
         <div class="white-panel">
-            <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2" style="color:var(--success)"></i>Top sach ban chay</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2" style="color:var(--success)"></i>Top sách bán chạy</h5>
             <canvas id="topBooksChart" height="280"></canvas>
         </div>
     </div>
     <div class="col-lg-6 fade-up">
         <div class="white-panel">
-            <h5 class="fw-bold mb-3"><i class="bi bi-star me-2" style="color:var(--accent2)"></i>Phan bo danh gia</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-star me-2" style="color:var(--accent2)"></i>Phân bổ đánh giá</h5>
             <canvas id="ratingChart" height="280"></canvas>
         </div>
     </div>
@@ -93,10 +93,10 @@
 <div class="row g-4 mb-4">
     <div class="col-lg-7 fade-up">
         <div class="white-panel">
-            <h5 class="fw-bold mb-3"><i class="bi bi-clock-history me-2" style="color:var(--primary)"></i>Don hang gan day</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-clock-history me-2" style="color:var(--primary)"></i>Đơn hàng gần đây</h5>
             <div class="table-responsive">
                 <table class="table table-sm mb-0" style="font-size:.9rem">
-                    <thead><tr><th>#</th><th>Khach</th><th>Trang thai</th><th>Tong</th><th>Ngay</th></tr></thead>
+                    <thead><tr><th>#</th><th>Khách</th><th>Trạng thái</th><th>Tổng</th><th>Ngày</th></tr></thead>
                     <tbody>
                     {% for order in recent_orders %}
                     <tr>
@@ -113,7 +113,7 @@
                         <td style="color:var(--text-muted)">{{ order.created_at|date:"d/m H:i" }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" class="text-center text-muted">Chua co don hang</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>Chưa có đơn hàng</td></tr>
                     {% endfor %}
                     </tbody>
                 </table>
@@ -122,17 +122,17 @@
     </div>
     <div class="col-lg-5 fade-up">
         <div class="white-panel">
-            <h5 class="fw-bold mb-3"><i class="bi bi-exclamation-triangle me-2" style="color:var(--danger)"></i>Sach sap het hang</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-exclamation-triangle me-2" style="color:var(--danger)"></i>Sách sắp hết hàng</h5>
             {% for book in low_stock %}
             <div class="d-flex justify-content-between align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}">
                 <div>
                     <div style="font-size:.9rem;font-weight:600">{{ book.title|truncatewords:6 }}</div>
                     <div style="font-size:.78rem;color:var(--text-muted)">{{ book.author }}</div>
                 </div>
-                <span class="badge-category" style="background:{% if book.stock == 0 %}rgba(225,112,85,.1);color:var(--danger){% else %}rgba(253,203,110,.15);color:#E17055{% endif %}">{{ book.stock }} con</span>
+                <span class="badge-category" style="background:{% if book.stock == 0 %}rgba(225,112,85,.1);color:var(--danger){% else %}rgba(253,203,110,.15);color:#E17055{% endif %}">{{ book.stock }} còn</span>
             </div>
             {% empty %}
-            <p class="text-muted text-center mb-0">Khong co sach nao sap het hang</p>
+            <p class="text-muted text-center mb-0 py-3"><i class="bi bi-check-circle me-1"></i>Không có sách nào sắp hết hàng</p>
             {% endfor %}
         </div>
     </div>
@@ -203,7 +203,7 @@ new Chart(document.getElementById('topBooksChart'), {
     data: {
         labels: topLabels,
         datasets: [{
-            label: 'Luot ban',
+            label: 'Lượt bán',
             data: topData,
             backgroundColor: catColors,
             borderRadius: 8,
@@ -230,7 +230,7 @@ new Chart(document.getElementById('ratingChart'), {
     data: {
         labels: ratingLabels,
         datasets: [{
-            label: 'So luong',
+            label: 'Số lượng',
             data: ratingData,
             backgroundColor: ratingColors.slice(0, ratingData.length),
             borderRadius: 8,
