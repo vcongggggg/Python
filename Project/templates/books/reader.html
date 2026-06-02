@@ -307,25 +307,6 @@
         background: var(--gradient-2);
         border-color: transparent;
     }
-    .reader-preview-card {
-        text-align: center;
-        padding: 3rem 1rem;
-    }
-    .reader-preview-card i {
-        color: var(--gold);
-        font-size: 3.5rem;
-    }
-    .reader-preview-card h2 {
-        font-size: clamp(1.7rem, 3vw, 2.35rem);
-        color: var(--reader-text);
-        margin: 1rem 0 .75rem;
-    }
-    .reader-preview-card p {
-        color: var(--reader-muted);
-        max-width: 560px;
-        margin: 0 auto 1.5rem;
-        text-align: center;
-    }
     @media (max-width: 720px) {
         .reader-topbar {
             align-items: flex-start;
@@ -373,9 +354,7 @@
             </div>
         </div>
         <div class="reader-actions">
-            {% if is_preview %}
-            <span class="meta-chip"><i class="bi bi-eye"></i>Đọc thử</span>
-            {% endif %}
+            <span class="meta-chip"><i class="bi bi-unlock"></i>Đọc online miễn phí</span>
             <button class="reader-icon-btn" id="decreaseFontBtn" title="Giảm cỡ chữ"><i class="bi bi-dash-lg"></i></button>
             <button class="reader-icon-btn" id="increaseFontBtn" title="Tăng cỡ chữ"><i class="bi bi-plus-lg"></i></button>
             <button class="reader-icon-btn" id="togglePanelBtn" title="Tùy chỉnh và danh sách trang"><i class="bi bi-sliders"></i></button>
@@ -441,13 +420,10 @@
 {% block extra_js %}
 <script>
     const pages = {{ pages|safe }};
-    const isPreview = {{ is_preview|yesno:"true,false" }};
+    const canSaveProgress = {{ can_save_progress|yesno:"true,false" }};
     const bookId = {{ book.pk }};
 
     let displayPages = pages.slice();
-    if (isPreview) {
-        displayPages.push("__BOOKIE_PREVIEW_END__");
-    }
 
     const shell = document.getElementById("readerShell");
     const contentEl = document.getElementById("pageContent");
@@ -465,7 +441,7 @@
     const settingKey = `bookie_reader_settings_${bookId}`;
     const progressKey = `bookie_reader_page_${bookId}`;
     const totalPages = displayPages.length;
-    const readableTotal = isPreview ? Math.max(1, totalPages - 1) : totalPages;
+    const readableTotal = totalPages;
     let currentPage = Number(localStorage.getItem(progressKey)) || {{ current_page }};
     currentPage = Math.min(Math.max(1, currentPage), totalPages);
     pageNumberInput.max = totalPages;
@@ -506,26 +482,9 @@
         });
     }
 
-    function renderPreviewEnd() {
-        contentEl.innerHTML = `
-            <div class="reader-preview-card">
-                <i class="bi bi-unlock"></i>
-                <h2>Bạn đã đọc hết phần xem thử</h2>
-                <p>Mua bản E-book để mở khóa toàn bộ nội dung và tiếp tục đọc trên Bookie Reader.</p>
-                <form action="/cart/add/${bookId}/" method="post" class="d-inline-block">
-                    <input type="hidden" name="csrfmiddlewaretoken" value="${getCookie("csrftoken")}">
-                    <input type="hidden" name="format" value="digital">
-                    <input type="hidden" name="quantity" value="1">
-                    <button type="submit" class="btn btn-gradient px-4 py-2">
-                        <i class="bi bi-bag-check me-1"></i>Mua E-book
-                    </button>
-                </form>
-            </div>
-        `;
-    }
-
     function saveProgress() {
         localStorage.setItem(progressKey, currentPage);
+        if (!canSaveProgress) return;
         fetch(`/api/v1/books/${bookId}/progress/`, {
             method: "POST",
             headers: {
@@ -534,7 +493,7 @@
             },
             body: JSON.stringify({
                 page: Math.min(currentPage, readableTotal),
-                finished: !isPreview && currentPage === totalPages
+                finished: currentPage === totalPages
             })
         }).catch(() => {});
     }
@@ -560,7 +519,7 @@
             btn.type = "button";
             btn.className = "page-jump";
             btn.classList.toggle("active", pageNum === currentPage);
-            btn.textContent = isPreview && pageNum === totalPages ? "Mở" : pageNum;
+            btn.textContent = pageNum;
             btn.addEventListener("click", () => {
                 goToPage(pageNum);
                 panel.classList.remove("show");
@@ -573,19 +532,12 @@
 
     function updateUI() {
         const page = displayPages[currentPage - 1] || "";
-        if (page === "__BOOKIE_PREVIEW_END__") {
-            kickerEl.textContent = "Mở khóa nội dung";
-            renderPreviewEnd();
-        } else {
-            kickerEl.textContent = `Trang ${currentPage}`;
-            renderTextPage(page);
-        }
+        kickerEl.textContent = `Trang ${currentPage}`;
+        renderTextPage(page);
 
         const pct = Math.round((currentPage / totalPages) * 100);
         progressBar.style.width = `${pct}%`;
-        pageIndicator.textContent = page === "__BOOKIE_PREVIEW_END__"
-            ? `Đọc thử ${readableTotal} trang`
-            : `Trang ${currentPage} / ${readableTotal} · ${pct}%`;
+        pageIndicator.textContent = `Trang ${currentPage} / ${readableTotal} · ${pct}%`;
         prevBtn.disabled = currentPage === 1;
         nextBtn.disabled = currentPage === totalPages;
         updatePageList();

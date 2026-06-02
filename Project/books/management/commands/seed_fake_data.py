@@ -125,7 +125,7 @@ class Command(BaseCommand):
                     "category": categories[normalize_category_name(category_name)],
                     "published_year": year,
                     "num_pages": pages,
-                    "stock": 999 if is_digital else rng.randint(8, 80),
+                    "stock": rng.randint(8, 80),
                     "is_digital": is_digital,
                     "content_text": EBOOK_CONTENT.get(title, ""),
                     "cover_image": "",
@@ -154,15 +154,14 @@ class Command(BaseCommand):
 
         books = list(Book.objects.select_related("category").order_by("id"))
         digital_books = [book for book in books if book.is_digital]
-        physical_books = [book for book in books if not book.is_digital]
         order_specs = [
-            ("demo", "delivered", "cod", physical_books[:3], "Đơn demo đã giao.", "12 Nguyễn Trãi, Quận 1, TP.HCM", "SAVE10"),
-            ("demo", "shipping", "vnpay", physical_books[3:5] + digital_books[:1], "Đơn demo đang giao.", "12 Nguyễn Trãi, Quận 1, TP.HCM", None),
-            ("alice", "confirmed", "momo", physical_books[5:8], "Giao giờ hành chính.", "88 Lê Lợi, Đà Nẵng", "FREESHIP"),
-            ("bob", "pending", "cod", physical_books[8:10] + digital_books[:1], "Gọi trước khi giao.", "45 Hai Bà Trưng, Hà Nội", None),
-            ("staff", "packing", "vnpay", physical_books[10:13], "Đơn nội bộ test dashboard.", "Kho Bookie", "VIP20"),
-            ("manager", "confirmed", "cod", physical_books[13:15], "Đơn test manager.", "Văn phòng Bookie", None),
-            ("support", "shipping", "cod", physical_books[15:17], "Đơn test support.", "Quầy CSKH Bookie", None),
+            ("demo", "delivered", "cod", books[:3], "Đơn demo đã giao.", "12 Nguyễn Trãi, Quận 1, TP.HCM", "SAVE10"),
+            ("demo", "shipping", "vnpay", books[3:6], "Đơn demo đang giao.", "12 Nguyễn Trãi, Quận 1, TP.HCM", None),
+            ("alice", "confirmed", "momo", books[6:9], "Giao giờ hành chính.", "88 Lê Lợi, Đà Nẵng", "FREESHIP"),
+            ("bob", "pending", "cod", books[9:12], "Gọi trước khi giao.", "45 Hai Bà Trưng, Hà Nội", None),
+            ("staff", "packing", "vnpay", books[12:15], "Đơn nội bộ test dashboard.", "Kho Bookie", "VIP20"),
+            ("manager", "confirmed", "cod", books[15:17], "Đơn test manager.", "Văn phòng Bookie", None),
+            ("support", "shipping", "cod", books[17:19], "Đơn test support.", "Quầy CSKH Bookie", None),
         ]
 
         for username, status, payment_method, selected_books, note, address, coupon_code in order_specs:
@@ -188,9 +187,9 @@ class Command(BaseCommand):
                 OrderItem.objects.create(
                     order=order,
                     book=book,
-                    quantity=1 if book.is_digital else rng.randint(1, 3),
+                    quantity=rng.randint(1, 3),
                     price=book.price,
-                    is_digital_purchase=book.is_digital,
+                    is_digital_purchase=False,
                 )
             order.discount_amount = Decimal(0)
             if coupon:

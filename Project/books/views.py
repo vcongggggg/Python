@@ -1,6 +1,5 @@
 import csv
 import json
-import math
 import re
 from io import BytesIO
 from collections import Counter, defaultdict
@@ -80,6 +79,8 @@ def _cart_items(request):
         if not book:
             continue
         book_format = parts[1] if len(parts) > 1 else "physical"
+        if book_format != "physical":
+            continue
         items.append({
             "book": book,
             "quantity": qty,
@@ -347,7 +348,6 @@ def book_list(request):
 def ebook_list(request):
     search = request.GET.get("q", "").strip()
     category_id = request.GET.get("category")
-    access = request.GET.get("access", "")
     try:
         current_category_id = int(category_id) if category_id else None
     except (TypeError, ValueError):
@@ -358,12 +358,6 @@ def ebook_list(request):
         qs = qs.filter(Q(title__icontains=search) | Q(author__icontains=search))
     if current_category_id:
         qs = qs.filter(category_id=current_category_id)
-    if access == "free":
-        qs = qs.filter(price=0)
-    elif access == "paid":
-        qs = qs.filter(price__gt=0)
-    else:
-        access = ""
 
     qs = qs.order_by("title")
     paginator = Paginator(qs, 12)
@@ -379,7 +373,6 @@ def ebook_list(request):
         "categories": categories,
         "search": search,
         "current_category_id": current_category_id,
-        "current_access": access,
         "wishlist_book_ids": wishlist_book_ids,
     }
     return render(request, "books/ebook_list.html", context)
@@ -525,8 +518,11 @@ def add_to_cart(request, book_id: int):
     book = get_object_or_404(Book, pk=book_id)
 
     book_format = request.POST.get("format", "physical")
-    if book_format == "digital" and not book.is_digital:
-        messages.error(request, "Sách này không có bản E-book.")
+    if book_format == "digital":
+        message = "Đọc online đang miễn phí. Giỏ hàng chỉ dùng để mua sách giấy."
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"status": "error", "message": message})
+        messages.info(request, message)
         return redirect("book_detail", pk=book.pk)
 
     if book_format == "physical" and not book.in_stock:
@@ -537,17 +533,14 @@ def add_to_cart(request, book_id: int):
 
     cart = _get_cart(request)
     key = f"{book.pk}_{book_format}"
-    if book_format == "digital":
-        new_qty = 1
-    else:
-        qty = request.POST.get("quantity") or request.GET.get("quantity") or 1
-        try:
-            qty = max(1, int(qty))
-        except (TypeError, ValueError):
-            qty = 1
-        new_qty = cart.get(key, 0) + qty
-        if new_qty > book.stock:
-            new_qty = book.stock
+    qty = request.POST.get("quantity") or request.GET.get("quantity") or 1
+    try:
+        qty = max(1, int(qty))
+    except (TypeError, ValueError):
+        qty = 1
+    new_qty = cart.get(key, 0) + qty
+    if new_qty > book.stock:
+        new_qty = book.stock
 
     cart[key] = new_qty
     _set_cart(request, cart)
@@ -555,15 +548,13 @@ def add_to_cart(request, book_id: int):
     # AJAX response
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         cart_total = sum(cart.values())
-        format_label = "E-book" if book_format == "digital" else "sách giấy"
         return JsonResponse({
             "status": "ok",
-            "message": f"Đã thêm bản {format_label} của '{book.title}' vào giỏ hàng.",
+            "message": f"Đã thêm sách giấy '{book.title}' vào giỏ hàng.",
             "cart_count": cart_total,
         })
 
-    format_label = "E-book" if book_format == "digital" else "sách giấy"
-    messages.success(request, f"Đã thêm bản {format_label} của '{book.title}' vào giỏ.")
+    messages.success(request, f"Đã thêm sách giấy '{book.title}' vào giỏ.")
     next_url = request.GET.get("next") or request.POST.get("next") or "book_detail"
     if next_url == "book_detail":
         return redirect("book_detail", pk=book.pk)
@@ -640,18 +631,16 @@ def checkout(request):
                 payment_method=form.cleaned_data["payment_method"],
             )
             for row in items:
-                is_digital = row.get("format") == "digital"
                 OrderItem.objects.create(
                     order=order,
                     book=row["book"],
                     quantity=row["quantity"],
                     price=row["book"].price,
-                    is_digital_purchase=is_digital,
+                    is_digital_purchase=False,
                 )
-                if not is_digital:
-                    book = row["book"]
-                    book.stock = max(0, book.stock - row["quantity"])
-                    book.save(update_fields=["stock"])
+                book = row["book"]
+                book.stock = max(0, book.stock - row["quantity"])
+                book.save(update_fields=["stock"])
 
             if applied_coupon:
                 applied_coupon.used_count += 1
@@ -2226,32 +2215,20 @@ def api_chatbot_stream(request) -> HttpResponse:
         return JsonResponse({"error": str(e)}, status=400)
 
 
-@login_required
 def read_book(request, pk: int):
     book = get_object_or_404(Book, pk=pk)
     if not book.is_digital:
         messages.warning(request, "Cuốn sách này hiện chưa hỗ trợ đọc trực tuyến.")
         return redirect("book_detail", pk=pk)
 
-    is_preview = False
-    if book.price > 0:
-        has_purchased = OrderItem.objects.filter(
-            order__user=request.user,
-            book=book,
-            is_digital_purchase=True,
-        ).exists()
-        if not has_purchased:
-            is_preview = True
-            messages.info(request, "Bạn đang xem bản đọc thử.")
-
-    progress, _ = ReadingProgress.objects.get_or_create(user=request.user, book=book)
     pages = _split_reader_pages(book.content_text or "")
-    if is_preview:
-        preview_limit = max(1, min(5, math.ceil(len(pages) * 0.10)))
-        pages = pages[:preview_limit]
-
     total_pages = len(pages)
-    current_page = min(max(1, progress.last_page), total_pages)
+    progress = None
+    last_page = 1
+    if request.user.is_authenticated:
+        progress, _ = ReadingProgress.objects.get_or_create(user=request.user, book=book)
+        last_page = progress.last_page
+    current_page = min(max(1, last_page), total_pages)
     return render(
         request,
         "books/reader.html",
@@ -2261,7 +2238,7 @@ def read_book(request, pk: int):
             "total_pages": total_pages,
             "current_page": current_page,
             "progress": progress,
-            "is_preview": is_preview,
+            "can_save_progress": request.user.is_authenticated,
         },
     )
 

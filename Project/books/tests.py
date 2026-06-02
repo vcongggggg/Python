@@ -138,7 +138,8 @@ class BasicFlowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("read_book", args=[self.book.id]))
-        self.assertContains(response, "Đọc sách")
+        self.assertContains(response, "Đọc online")
+        self.assertNotContains(response, "Mua E-book")
 
     def test_ebook_list_only_shows_digital_books(self):
         ebook = Book.objects.create(
@@ -157,17 +158,9 @@ class BasicFlowTest(TestCase):
         self.assertContains(response, reverse("read_book", args=[ebook.pk]))
         self.assertNotContains(response, self.book.title)
 
-    def test_ebook_list_filters_free_and_paid_books(self):
-        free_book = Book.objects.create(
-            title="Free Django Ebook",
-            author="Bookie",
-            price=0,
-            category=self.category,
-            is_digital=True,
-            content_text="Trang 1",
-        )
-        paid_book = Book.objects.create(
-            title="Paid Django Ebook",
+    def test_ebook_list_does_not_show_prices_or_purchase_actions(self):
+        ebook = Book.objects.create(
+            title="Paid Price Physical Book With Online Reader",
             author="Bookie",
             price=120000,
             category=self.category,
@@ -175,13 +168,13 @@ class BasicFlowTest(TestCase):
             content_text="Trang 1",
         )
 
-        response = self.client.get(reverse("ebook_list"), {"access": "free"})
-        self.assertContains(response, free_book.title)
-        self.assertNotContains(response, paid_book.title)
+        response = self.client.get(reverse("ebook_list"))
 
-        response = self.client.get(reverse("ebook_list"), {"access": "paid"})
-        self.assertContains(response, paid_book.title)
-        self.assertNotContains(response, free_book.title)
+        self.assertContains(response, ebook.title)
+        self.assertContains(response, "Đọc online")
+        self.assertNotContains(response, "120000")
+        self.assertNotContains(response, "Mua E-book")
+        self.assertNotContains(response, "Đọc thử")
 
     def test_navbar_links_to_ebook_list(self):
         response = self.client.get(reverse("home"))
@@ -195,30 +188,20 @@ class BasicFlowTest(TestCase):
         response = self.client.get(reverse("read_book", args=[self.book.id]))
         self.assertRedirects(response, reverse("book_detail", args=[self.book.id]))
 
-    def test_paid_digital_book_is_preview_until_purchased(self):
+    def test_online_reader_is_free_even_when_physical_book_has_price(self):
         self.book.is_digital = True
-        self.book.content_text = "\n\n".join([f"Trang {i}" for i in range(1, 11)])
+        self.book.content_text = "\n\n".join([f"Trang {i} " + ("noi dung " * 180) for i in range(1, 13)])
         self.book.price = 100
         self.book.save(update_fields=["is_digital", "content_text", "price"])
-        self.client.force_login(self.user)
 
         response = self.client.get(reverse("read_book", args=[self.book.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context["is_preview"])
+        self.assertGreater(response.context["total_pages"], 5)
+        self.assertFalse(response.context["can_save_progress"])
+        self.assertNotContains(response, "Mua E-book")
+        self.assertNotContains(response, "Đọc thử")
 
-        order = Order.objects.create(user=self.user)
-        OrderItem.objects.create(
-            order=order,
-            book=self.book,
-            quantity=1,
-            price=self.book.price,
-            is_digital_purchase=True,
-        )
-        response = self.client.get(reverse("read_book", args=[self.book.id]))
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context["is_preview"])
-
-    def test_digital_checkout_marks_purchase_without_decreasing_stock(self):
+    def test_digital_format_cannot_be_added_to_cart(self):
         self.book.is_digital = True
         self.book.content_text = "Trang 1"
         self.book.stock = 10
@@ -230,20 +213,8 @@ class BasicFlowTest(TestCase):
             data={"format": "digital", "quantity": "5"},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(self.client.session["cart"][f"{self.book.id}_digital"], 1)
-
-        response = self.client.post(
-            reverse("checkout"),
-            data={
-                "shipping_address": "123 Test Street",
-                "note": "",
-                "coupon_code": "",
-                "payment_method": "cod",
-            },
-        )
-        self.assertEqual(response.status_code, 302)
-        item = OrderItem.objects.get(book=self.book)
-        self.assertTrue(item.is_digital_purchase)
+        self.assertNotIn(f"{self.book.id}_digital", self.client.session.get("cart", {}))
+        self.assertEqual(OrderItem.objects.count(), 0)
         self.book.refresh_from_db()
         self.assertEqual(self.book.stock, 10)
 

@@ -65,8 +65,8 @@ docker compose exec web python manage.py import_sqlite_books
 - Wishlist.
 - Rating/comment sách.
 - Reading DNA.
-- Ebook reader giao diện mới: đọc từng trang, progress, chuyển trang bằng nút/phím, tùy chỉnh theme/cỡ chữ/độ rộng, lưu tiến độ đọc.
-- Lọc ebook theo thể loại và miễn phí/trả phí.
+- Ebook reader giao diện mới: đọc online miễn phí, đọc từng trang, progress, chuyển trang bằng nút/phím, tùy chỉnh theme/cỡ chữ/độ rộng, lưu tiến độ đọc khi đã đăng nhập.
+- Giá sách trên catalog/chi tiết/giỏ hàng là giá sách giấy; đọc online không có giá E-book riêng.
 
 ### Quản Trị/Dashboard
 
@@ -161,10 +161,10 @@ Baseline hiện tại:
 
 - Trang chủ và chi tiết sách.
 - Trang `/ebooks/` chỉ hiển thị sách digital.
-- Bộ lọc ebook miễn phí/trả phí.
+- Trang `/ebooks/` không hiển thị giá hoặc nút mua E-book.
 - Navbar có link `Đọc sách online`.
-- Reader ebook, preview/full access, chia nội dung dài thành nhiều trang, lưu tiến độ đọc.
-- Checkout sách giấy/digital.
+- Reader ebook đọc full online miễn phí, chia nội dung dài thành nhiều trang, lưu tiến độ đọc khi đăng nhập.
+- Checkout chỉ dành cho sách giấy.
 - Coupon hợp lệ/không hợp lệ.
 - Dashboard URL reverse.
 - Reading DNA context.
@@ -192,7 +192,7 @@ Chưa test đủ:
 - Mở chi tiết sách, thêm vào giỏ.
 - Checkout với COD/Momo mock.
 - Áp coupon `SAVE10`, `FREESHIP`, `VIP20`.
-- Kiểm tra tồn kho sách giấy giảm, ebook không giảm.
+- Kiểm tra tồn kho sách giấy giảm sau checkout.
 
 ### Tài Khoản
 
@@ -205,10 +205,9 @@ Chưa test đủ:
 ### Ebook
 
 - Mở `/ebooks/` từ Navbar `Đọc sách online`.
-- Tìm kiếm/lọc ebook theo thể loại, miễn phí/trả phí.
-- Mở ebook miễn phí.
+- Tìm kiếm/lọc sách đọc online theo thể loại.
+- Mở sách đọc online, không thấy giá E-book hoặc nút mua E-book.
 - Kiểm tra reader, chuyển trang bằng nút/phím mũi tên, mở panel tùy chỉnh, đổi theme/cỡ chữ/độ rộng, lưu tiến độ.
-- Kiểm tra sách digital trả phí preview nếu chưa mua.
 
 ### Dashboard Và RBAC
 

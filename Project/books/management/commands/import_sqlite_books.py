@@ -65,15 +65,19 @@ class Command(BaseCommand):
 
             category_name = self._category_name(row, source_categories)
             category, _ = Category.objects.get_or_create(name=category_name)
+            is_digital = bool(row["is_digital"])
+            price = Decimal(str(row["price"] or 0))
+            if is_digital and price <= 0:
+                price = Decimal("89000")
             defaults = {
                 "description": row["description"] or "",
-                "price": Decimal(str(row["price"] or 0)),
+                "price": price,
                 "category": category,
                 "published_year": row["published_year"],
                 "num_pages": row["num_pages"],
                 "cover_image": row["cover_image"] or "",
                 "stock": row["stock"] or 0,
-                "is_digital": bool(row["is_digital"]),
+                "is_digital": is_digital,
                 "content_text": row["content_text"] or "",
                 "created_at": self._parse_created_at(row["created_at"]),
             }

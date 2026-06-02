@@ -84,12 +84,12 @@ class Command(BaseCommand):
                         title=title,
                         author=author,
                         description=f"Một tác phẩm kinh điển từ Project Gutenberg (ID: {gutenberg_id}).",
-                        price=0.00,
+                        price=89000,
                         category=category,
                         is_digital=True,
                         content_text=content_text,
                         cover_image=cover_url or "",
-                        stock=999,
+                        stock=30,
                     )
                     self.stdout.write(self.style.SUCCESS(f"Da them thanh cong: {title}"))
 

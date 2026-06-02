@@ -76,24 +76,11 @@
 
                     {% if book.is_digital %}
                     <a href="{% url 'read_book' book.pk %}" class="btn btn-gradient">
-                        <i class="bi bi-book-half me-1"></i>Đọc sách
+                        <i class="bi bi-book-half me-1"></i>Đọc online
                     </a>
-                    {% if book.price > 0 %}
-                    <div class="digital-buy-box">
-                        <form action="{% url 'add_to_cart' book.pk %}" method="post" class="ajax-form m-0 p-0">
-                            {% csrf_token %}
-                            <input type="hidden" name="format" value="digital">
-                            <input type="hidden" name="quantity" value="1">
-                            <button type="submit" class="btn btn-outline-info">
-                                <i class="bi bi-cloud-download me-1"></i>Mua E-book
-                            </button>
-                        </form>
-                    </div>
-                    {% else %}
                     <span class="badge-category" style="background:rgba(0,184,148,.15);color:#00B894">
-                        <i class="bi bi-unlock me-1"></i>Ebook miễn phí
+                        <i class="bi bi-unlock me-1"></i>Đọc online miễn phí
                     </span>
-                    {% endif %}
                     {% endif %}
 
                     <!-- Wishlist -->
