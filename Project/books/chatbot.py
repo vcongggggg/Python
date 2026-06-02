@@ -57,7 +57,13 @@ class BookieChatbot:
                 action_response["text"] = clean_text or action_response.get("text", "")
                 return action_response
 
-        return {"text": clean_text or raw.strip(), "type": "text"}
+        response = {"text": clean_text or raw.strip(), "type": "text"}
+        if found_books:
+            filtered = _filter_books_by_mention(found_books, response["text"])
+            if filtered:
+                response["type"] = "books"
+                response["books"] = filtered
+        return response
 
     def get_catalog_response(self, text: str, limit: int = 3) -> dict[str, Any] | None:
         if not _looks_like_book_search(text):
@@ -163,8 +169,10 @@ class BookieChatbot:
             .annotate(sales=Count("order_items"))
             .order_by("-sales", "title")[:100]
         )
-        books.sort(key=lambda book: _book_relevance(book, terms), reverse=True)
-        return books[:limit]
+        scored_books = [(book, _book_relevance(book, terms)) for book in books]
+        valid_books = [item for item in scored_books if item[1] > 0]
+        valid_books.sort(key=lambda item: item[1], reverse=True)
+        return [book for book, score in valid_books][:limit]
 
     def _handle_action(self, action_data: dict[str, Any]) -> dict[str, Any]:
         action = str(action_data.get("action", "")).strip().lower()
@@ -432,12 +440,35 @@ def _book_relevance(book: Book, terms: list[str]) -> int:
     for term in terms:
         normalized_term = _strip_accents(term).lower()
         exact_topic_bonus = 10 if normalized_term == "python" else 1
-        if normalized_term in title:
+        if _title_matches(normalized_term, title):
             score += 8 * exact_topic_bonus
-        if normalized_term in description:
+        if _title_matches(normalized_term, description):
             score += 4 * exact_topic_bonus
-        if normalized_term in author:
+        if _title_matches(normalized_term, author):
             score += 3
-        if normalized_term in category:
+        if _title_matches(normalized_term, category):
             score += 1
     return score
+
+
+def _title_matches(title: str, text: str) -> bool:
+    title_clean = title.split("(")[0].split(":")[0].strip().lower()
+    if not title_clean:
+        return False
+    if len(title_clean) <= 3:
+        try:
+            return bool(re.search(rf"\b{re.escape(title_clean)}\b", text.lower()))
+        except Exception:
+            return title_clean in text.lower()
+    return title_clean in text.lower()
+
+
+def _filter_books_by_mention(books: list[dict[str, Any]], text: str) -> list[dict[str, Any]]:
+    if not books or not text:
+        return []
+    filtered = []
+    for book in books:
+        title = str(book.get("title", ""))
+        if _title_matches(title, text):
+            filtered.append(book)
+    return filtered

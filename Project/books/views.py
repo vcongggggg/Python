@@ -2102,8 +2102,11 @@ def _stream_chat_payload_with_history(request, stream_gen, user_message, found_b
 
     # If no action response but we have found_books (pre-fetched), fallback to book recommendations
     if not action_response and found_books:
-        payload["type"] = "books"
-        payload["books"] = found_books
+        from .chatbot import _filter_books_by_mention
+        filtered = _filter_books_by_mention(found_books, payload["text"])
+        if filtered:
+            payload["type"] = "books"
+            payload["books"] = filtered
 
     yield json.dumps({"type": "final", "payload": payload}, ensure_ascii=False).encode("utf-8") + b"\n"
 
