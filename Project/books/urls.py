@@ -31,6 +31,7 @@ urlpatterns = [
     path("profile/edit/", views.profile_edit, name="profile_edit"),
     path("profile/password/", views.profile_change_password, name="profile_change_password"),
     path("profile/reading-dna/", views.reading_dna, name="reading_dna"),
+    path("profile/reading-history/", views.reading_history, name="reading_history"),
     path("books/<int:pk>/read/", views.read_book, name="read_book"),
     path("api/v1/books/<int:pk>/progress/", views.api_save_reading_progress, name="api_save_reading_progress"),
     path("about/", views.about, name="about"),

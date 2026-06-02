@@ -1177,6 +1177,7 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2 mt-2" style="border-radius:var(--radius-sm);min-width:200px">
                         <li><a class="dropdown-item rounded-2 py-2" href="{% url 'profile' %}"><i class="bi bi-person-circle me-2"></i>Tài khoản</a></li>
+                        <li><a class="dropdown-item rounded-2 py-2" href="{% url 'reading_history' %}"><i class="bi bi-book me-2" style="color:var(--primary-light)"></i>Lịch sử đọc</a></li>
                         <li><a class="dropdown-item rounded-2 py-2" href="{% url 'reading_dna' %}"><i class="bi bi-fingerprint me-2" style="color:var(--accent)"></i>Reading DNA</a></li>
                         <li><a class="dropdown-item rounded-2 py-2" href="{% url 'order_list' %}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
                         {% if user.is_staff %}

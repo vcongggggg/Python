@@ -334,6 +334,22 @@ class BasicFlowTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("order_invoice_pdf", args=[order.pk]))
 
+    def test_reading_history_view(self):
+        self.book.is_digital = True
+        self.book.content_text = ("a" * 1000) + "\n\n" + ("b" * 1000)
+        self.book.save(update_fields=["is_digital", "content_text"])
+
+        ReadingProgress.objects.create(user=self.user, book=self.book, last_page=1)
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("reading_history"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Lịch sử đọc sách")
+        self.assertContains(response, self.book.title)
+        self.assertContains(response, "Trang 1/2")
+        self.assertContains(response, "50%")
+
     def test_order_invoice_pdf_download_requires_owner(self):
         order = Order.objects.create(user=self.user, shipping_address="123 Test Street")
         OrderItem.objects.create(order=order, book=self.book, quantity=2, price=self.book.price)

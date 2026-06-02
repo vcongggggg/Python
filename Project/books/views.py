@@ -1883,6 +1883,31 @@ def reading_dna(request):
     return render(request, "books/reading_dna.html", context)
 
 
+@login_required
+def reading_history(request):
+    """Show the current user's online reading progress."""
+    progresses = (
+        ReadingProgress.objects.filter(user=request.user)
+        .select_related("book")
+        .order_by("-last_read_at")
+    )
+    history_items = []
+
+    for progress in progresses:
+        book = progress.book
+        total_pages = len(_split_reader_pages(book.content_text or ""))
+        percentage = min(100, round((progress.last_page / total_pages) * 100)) if total_pages else 0
+        history_items.append({
+            "progress": progress,
+            "book": book,
+            "percentage": percentage,
+            "total_pages": total_pages,
+            "is_finished": progress.is_finished,
+        })
+
+    return render(request, "books/reading_history.html", {"history_items": history_items})
+
+
 def _get_chat_history(request) -> list[dict[str, str]]:
     history = request.session.get("chat_history")
     if not isinstance(history, list):
