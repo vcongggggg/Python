@@ -1,10 +1,13 @@
 import csv
+import html as html_lib
 import json
 import re
 from io import BytesIO
 from collections import Counter, defaultdict
 from datetime import timedelta
+from html.parser import HTMLParser
 from typing import Any, Iterable
+from urllib.parse import urljoin, urlparse
 
 from django.conf import settings
 from django.contrib import messages
@@ -2078,6 +2081,110 @@ def _split_reader_pages(content: str, max_chars: int = 1800) -> list[str]:
     return pages or ["Nội dung sách đang được cập nhật."]
 
 
+class ReaderHTMLSanitizer(HTMLParser):
+    allowed_tags = {
+        "p", "br", "strong", "em", "b", "i", "u", "h1", "h2", "h3", "h4",
+        "blockquote", "img", "figure", "figcaption", "hr", "ul", "ol", "li",
+    }
+    void_tags = {"br", "hr", "img"}
+    blocked_tags = {"script", "style", "iframe", "object", "embed", "form", "input", "button"}
+
+    def __init__(self, base_url: str = ""):
+        super().__init__(convert_charrefs=True)
+        self.base_url = base_url
+        self.parts: list[str] = []
+        self.block_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if tag in self.blocked_tags:
+            self.block_depth += 1
+            return
+        if self.block_depth or tag not in self.allowed_tags:
+            return
+
+        attr_map = {name.lower(): value for name, value in attrs if value}
+        safe_attrs = []
+        if tag == "img":
+            src = self._safe_img_src(attr_map.get("src", ""))
+            if not src:
+                return
+            safe_attrs.append(("src", src))
+            if attr_map.get("alt"):
+                safe_attrs.append(("alt", attr_map["alt"][:180]))
+            if attr_map.get("title"):
+                safe_attrs.append(("title", attr_map["title"][:180]))
+
+        attr_html = "".join(
+            f' {name}="{html_lib.escape(value, quote=True)}"'
+            for name, value in safe_attrs
+        )
+        self.parts.append(f"<{tag}{attr_html}>")
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in self.blocked_tags and self.block_depth:
+            self.block_depth -= 1
+            return
+        if self.block_depth or tag not in self.allowed_tags or tag in self.void_tags:
+            return
+        self.parts.append(f"</{tag}>")
+
+    def handle_data(self, data):
+        if not self.block_depth:
+            self.parts.append(html_lib.escape(data))
+
+    def _safe_img_src(self, src: str) -> str:
+        src = urljoin(self.base_url, src.strip())
+        parsed = urlparse(src)
+        if parsed.scheme not in {"http", "https"}:
+            return ""
+        return src
+
+    def get_html(self) -> str:
+        return "".join(self.parts).strip()
+
+
+def _sanitize_reader_html(content: str, base_url: str = "") -> str:
+    parser = ReaderHTMLSanitizer(base_url=base_url)
+    parser.feed(content or "")
+    parser.close()
+    return parser.get_html()
+
+
+def _split_reader_html_pages(content: str, max_chars: int = 2600) -> list[str]:
+    html = (content or "").strip()
+    if not html:
+        return []
+    block_pattern = re.compile(
+        r"<(?:p|h[1-4]|blockquote|figure|ul|ol)\b[\s\S]*?</(?:p|h[1-4]|blockquote|figure|ul|ol)>|<img\b[^>]*>|<hr\b[^>]*>",
+        re.IGNORECASE,
+    )
+    blocks = [match.group(0).strip() for match in block_pattern.finditer(html)]
+    if not blocks:
+        return [html]
+
+    pages: list[str] = []
+    current: list[str] = []
+    current_len = 0
+    for block in blocks:
+        text_len = len(re.sub(r"<[^>]+>", "", block))
+        has_image = "<img" in block.lower()
+        if current and (current_len + text_len > max_chars or has_image):
+            pages.append("".join(current))
+            current = []
+            current_len = 0
+        current.append(block)
+        current_len += text_len
+        if has_image:
+            pages.append("".join(current))
+            current = []
+            current_len = 0
+    if current:
+        pages.append("".join(current))
+    return pages
+
+
 @csrf_exempt
 def api_chatbot(request) -> JsonResponse:
     """API for Bookie Chatbot."""
@@ -2221,7 +2328,14 @@ def read_book(request, pk: int):
         messages.warning(request, "Cuốn sách này hiện chưa hỗ trợ đọc trực tuyến.")
         return redirect("book_detail", pk=pk)
 
-    pages = _split_reader_pages(book.content_text or "")
+    reader_content_format = "text"
+    pages = []
+    if book.content_html:
+        pages = _split_reader_html_pages(book.content_html)
+        if pages:
+            reader_content_format = "html"
+    if not pages:
+        pages = _split_reader_pages(book.content_text or "")
     total_pages = len(pages)
     progress = None
     last_page = 1
@@ -2239,6 +2353,7 @@ def read_book(request, pk: int):
             "current_page": current_page,
             "progress": progress,
             "can_save_progress": request.user.is_authenticated,
+            "reader_content_format": reader_content_format,
         },
     )
 

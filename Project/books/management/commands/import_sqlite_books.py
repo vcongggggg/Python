@@ -79,6 +79,7 @@ class Command(BaseCommand):
                 "stock": row["stock"] or 0,
                 "is_digital": is_digital,
                 "content_text": row["content_text"] or "",
+                "content_html": row["content_html"] or "",
                 "created_at": self._parse_created_at(row["created_at"]),
             }
 
@@ -123,9 +124,14 @@ class Command(BaseCommand):
                 row["id"]: row["name"]
                 for row in conn.execute("SELECT id, name FROM books_category")
             }
+            columns = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(books_book)").fetchall()
+            }
+            content_html_sql = "content_html" if "content_html" in columns else "'' AS content_html"
             books = list(
                 conn.execute(
-                    """
+                    f"""
                     SELECT
                         title,
                         author,
@@ -138,6 +144,7 @@ class Command(BaseCommand):
                         stock,
                         is_digital,
                         content_text,
+                        {content_html_sql},
                         created_at
                     FROM books_book
                     ORDER BY id
