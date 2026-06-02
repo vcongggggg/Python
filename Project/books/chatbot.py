@@ -34,7 +34,8 @@ class BookieChatbot:
         if catalog_response:
             return catalog_response
 
-        prompt = self.build_prompt(text, history, [])
+        found_books = [_format_book_result(book) for book in self._find_books(text, limit=3)]
+        prompt = self.build_prompt(text, history, found_books)
         try:
             raw = self._client.generate(prompt)
         except Exception:
@@ -95,16 +96,43 @@ class BookieChatbot:
             if content:
                 history_lines.append(f"{role}: {content}")
 
+        fallback_books = []
+        if not found_books:
+            db_books = Book.objects.annotate(sales=Count("order_items")).order_by("-sales", "title")[:3]
+            fallback_books = [_format_book_result(book) for book in db_books]
+
         rules = [
             "Bạn là Bookie, trợ lý thân thiện của nhà sách Bookie.",
             f"Người dùng hiện tại: {user_name}.",
             "Trả lời ngắn gọn bằng tiếng Việt.",
-            "Không tự bịa tên sách, giá sách hoặc tình trạng tồn kho.",
-            "Nếu người dùng hỏi mua/tìm sách, hệ thống sẽ xử lý bằng database trước; bạn chỉ trò chuyện bổ trợ.",
+            "TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ BỊA RA sách, tác giả, giá cả hoặc thể loại không có trong database.",
+            "Nếu người dùng hỏi mua/tìm sách, hệ thống đã xử lý bằng database trước. Bạn chỉ được phép tư vấn và gợi ý các sách thực tế có trong database dựa trên danh sách được cung cấp dưới đây.",
         ]
+
         if found_books:
-            titles = ", ".join([f"'{book['title']}'" for book in found_books])
-            rules.append(f"Sách tìm thấy trong database: {titles}.")
+            titles = ", ".join([f"'{book['title']}' (Giá: {book['price']}, Link: {book['url']})" for book in found_books])
+            rules.append(f"Các sách phù hợp tìm thấy trong database: {titles}.")
+            rules.append("Hãy giới thiệu các sách này cho người dùng.")
+        else:
+            titles = ", ".join([f"'{book['title']}' (Giá: {book['price']}, Link: {book['url']})" for book in fallback_books])
+            rules.append(
+                f"Nếu người dùng đang hỏi tìm sách hoặc thể loại/chủ đề sách cụ thể, nhưng không có sách nào khớp trong database: "
+                f"bạn BẮT BUỘC phải thông báo rõ là Bookie hiện chưa có sách hoặc thể loại này, "
+                f"sau đó giới thiệu cho họ các sách khác hiện đang có sẵn tại Bookie dưới đây làm gợi ý thay thế: {titles}."
+            )
+
+        # Action instructions
+        action_instructions = (
+            "Nếu người dùng muốn thực hiện một hành động cụ thể, hãy thêm một đối tượng JSON vào cuối câu trả lời của bạn ở định dạng: "
+            "{\"action\": \"tên_hành_động\", ...}. "
+            "Các hành động được hỗ trợ:\n"
+            "- Tra cứu đơn hàng của tôi: {\"action\": \"order_status\"}\n"
+            "- Tìm kiếm sách: {\"action\": \"search_books\", \"query\": \"từ khóa\"}\n"
+            "- Gợi ý sách theo DNA/sở thích: {\"action\": \"reading_dna\"}\n"
+            "- Xem sách bán chạy/phổ biến: {\"action\": \"popular_books\", \"limit\": số_lượng}\n"
+            "Ví dụ: 'Để mình kiểm tra đơn hàng giúp bạn nhé. {\"action\": \"order_status\"}'"
+        )
+        rules.append(action_instructions)
 
         return (
             f"System: {' '.join(rules)}\n\n"

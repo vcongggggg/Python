@@ -2057,26 +2057,65 @@ def _stream_chat_payload(payload_or_generator, is_real_stream=False, chunk_size:
 def _stream_chat_payload_with_history(request, stream_gen, user_message, found_books) -> Iterable[bytes]:
     yield json.dumps({"type": "start"}, ensure_ascii=False).encode("utf-8") + b"\n"
     full_text = ""
+    stream_to_user = True
     try:
         for chunk in stream_gen:
             full_text += chunk
-            yield json.dumps({"type": "delta", "content": chunk}, ensure_ascii=False).encode("utf-8") + b"\n"
+            if stream_to_user:
+                if "{" in chunk:
+                    parts = chunk.split("{", 1)
+                    if parts[0]:
+                        yield json.dumps({"type": "delta", "content": parts[0]}, ensure_ascii=False).encode("utf-8") + b"\n"
+                    stream_to_user = False
+                else:
+                    yield json.dumps({"type": "delta", "content": chunk}, ensure_ascii=False).encode("utf-8") + b"\n"
     except OllamaError:
         fallback_text = "Xin lỗi, Bookie đang hơi chậm. Bạn thử lại sau vài giây nhé!"
         full_text = full_text or fallback_text
         yield json.dumps({"type": "delta", "content": fallback_text}, ensure_ascii=False).encode("utf-8") + b"\n"
 
-    payload = {"text": full_text, "type": "text"}
-    if found_books:
+    # Now parse action from full_text if present
+    clean_text = full_text
+    parsed_action = None
+    match = re.search(r"\{[\s\S]*?\}", full_text, re.DOTALL)
+    if match:
+        try:
+            parsed = json.loads(match.group(0))
+            clean_text = full_text[: match.start()].strip()
+            if parsed and "action" in parsed:
+                parsed_action = parsed
+        except json.JSONDecodeError:
+            pass
+
+    bot = _build_chatbot(request)
+    payload = {"text": clean_text, "type": "text"}
+    
+    # If there is a parsed action, execute it
+    action_response = {}
+    if parsed_action:
+        action_response = bot._handle_action(parsed_action)
+        if action_response:
+            payload.update(action_response)
+            # If the action response didn't specify text, use clean_text
+            if "text" not in action_response or not action_response["text"]:
+                payload["text"] = clean_text
+
+    # If no action response but we have found_books (pre-fetched), fallback to book recommendations
+    if not action_response and found_books:
         payload["type"] = "books"
         payload["books"] = found_books
+
     yield json.dumps({"type": "final", "payload": payload}, ensure_ascii=False).encode("utf-8") + b"\n"
 
     history = _get_chat_history(request)
     updated = _append_chat_history(request, history, "user", user_message, settings.OLLAMA_CONTEXT_TURNS)
-    _append_chat_history(request, updated, "assistant", full_text, settings.OLLAMA_CONTEXT_TURNS)
-    if found_books:
-        _set_last_books(request, found_books)
+    
+    # Use the final displayed text or clean text for history
+    final_text_for_history = payload.get("text") or clean_text
+    _append_chat_history(request, updated, "assistant", final_text_for_history, settings.OLLAMA_CONTEXT_TURNS)
+    
+    if payload.get("type") == "books":
+        _set_last_books(request, payload.get("books", []))
     request.session.save()
 
 

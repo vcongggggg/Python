@@ -1234,7 +1234,14 @@
             <button class="btn btn-link text-white p-0" onclick="toggleChat()"><i class="bi bi-xlg"></i></button>
         </div>
         <div class="chat-body" id="chatBody">
-            <div class="msg msg-bot">Chào bạn! Mình là **Bookie**. Rất vui được gặp bạn! 👋</div>
+            <div class="msg msg-bot">
+                Chào bạn! Mình là **Bookie**. Rất vui được gặp bạn! 👋
+                <div class="quick-replies" style="margin-top: 0.5rem;">
+                    <div class="quick-reply" onclick="sendChatMessage('Tìm sách hay')">Tìm sách hay</div>
+                    <div class="quick-reply" onclick="sendChatMessage('Đơn hàng của tôi')">Đơn hàng của tôi</div>
+                    <div class="quick-reply" onclick="sendChatMessage('Gợi ý cho tôi')">Gợi ý cho tôi</div>
+                </div>
+            </div>
         </div>
         <div class="chat-footer">
             <div class="typing-indicator" id="typingIndicator">Bookie đang trả lời...</div>
@@ -1546,6 +1553,32 @@
         const chatWindow = document.getElementById('chatWindow');
         const typingIndicator = document.getElementById('typingIndicator');
 
+        // Session Storage Persistence helpers
+        function saveMessage(sender, text, type = 'text', data = null) {
+            let history = [];
+            try {
+                history = JSON.parse(sessionStorage.getItem('bookie_chat_history') || '[]');
+            } catch(e) {}
+            history.push({ sender, text, type, data });
+            sessionStorage.setItem('bookie_chat_history', JSON.stringify(history));
+        }
+
+        function loadChatHistory() {
+            let history = [];
+            try {
+                history = JSON.parse(sessionStorage.getItem('bookie_chat_history') || '[]');
+            } catch(e) {}
+            
+            if (history.length > 0) {
+                chatBody.innerHTML = '';
+                history.forEach(msg => {
+                    const msgDiv = createMessageElement(msg.sender, true);
+                    renderMessage(msgDiv, msg.text, msg.type, msg.data);
+                    chatBody.appendChild(msgDiv);
+                });
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        }
 
         window.handleChatKey = function(e) {
             if (e.key === 'Enter') sendChatMessage();
@@ -1557,6 +1590,7 @@
 
             if (!text) chatInput.value = '';
             addMessage(msgText, 'user');
+            saveMessage('user', msgText, 'text', null);
 
             typingIndicator.style.display = 'block';
             chatBody.scrollTop = chatBody.scrollHeight;
@@ -1582,12 +1616,15 @@
                 typingIndicator.style.display = 'none';
                 if (data.error) {
                     addMessage("Xin lỗi, Bookie gặp chút sự cố kỹ thuật. Bạn thử lại nhé!", 'bot');
+                    saveMessage('bot', "Xin lỗi, Bookie gặp chút sự cố kỹ thuật. Bạn thử lại nhé!", 'text', null);
                 } else {
                     addMessage(data.text, 'bot', data.type, data);
+                    saveMessage('bot', data.text, data.type, data);
                 }
             } catch (e) {
                 typingIndicator.style.display = 'none';
                 addMessage("Không thể kết nối với Bookie. Kiểm tra mạng xem sao bạn nhé!", 'bot');
+                saveMessage('bot', "Không thể kết nối với Bookie. Kiểm tra mạng xem sao bạn nhé!", 'text', null);
             }
         };
 
@@ -1635,6 +1672,7 @@
 
                     if (eventData.type === 'final') {
                         renderMessage(botEl, eventData.payload.text || textBuffer, eventData.payload.type, eventData.payload);
+                        saveMessage('bot', eventData.payload.text || textBuffer, eventData.payload.type, eventData.payload);
                     }
                 });
             }
@@ -1643,9 +1681,9 @@
             return true;
         }
 
-        function createMessageElement(sender) {
+        function createMessageElement(sender, isInitialLoad = false) {
             const msgDiv = document.createElement('div');
-            msgDiv.className = `msg msg-${sender} fade-up`;
+            msgDiv.className = `msg msg-${sender}` + (isInitialLoad ? '' : ' fade-up');
             const textDiv = document.createElement('div');
             textDiv.className = 'msg-text';
             msgDiv.appendChild(textDiv);
@@ -1757,8 +1795,19 @@
         chatWindow.classList.toggle('show');
         if (chatWindow.classList.contains('show')) {
             chatInput.focus();
+            sessionStorage.setItem('bookie_chat_open', 'true');
+        } else {
+            sessionStorage.removeItem('bookie_chat_open');
         }
     };
+
+    // Restoring chat history and open state
+    document.addEventListener('DOMContentLoaded', () => {
+        loadChatHistory();
+        if (sessionStorage.getItem('bookie_chat_open') === 'true') {
+            chatWindow.classList.add('show');
+        }
+    });
 
     // Proactive greeting
     setTimeout(() => {
