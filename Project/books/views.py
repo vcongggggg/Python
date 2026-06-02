@@ -344,6 +344,47 @@ def book_list(request):
     return render(request, "books/book_list.html", context)
 
 
+def ebook_list(request):
+    search = request.GET.get("q", "").strip()
+    category_id = request.GET.get("category")
+    access = request.GET.get("access", "")
+    try:
+        current_category_id = int(category_id) if category_id else None
+    except (TypeError, ValueError):
+        current_category_id = None
+
+    qs = Book.objects.filter(is_digital=True)
+    if search:
+        qs = qs.filter(Q(title__icontains=search) | Q(author__icontains=search))
+    if current_category_id:
+        qs = qs.filter(category_id=current_category_id)
+    if access == "free":
+        qs = qs.filter(price=0)
+    elif access == "paid":
+        qs = qs.filter(price__gt=0)
+    else:
+        access = ""
+
+    qs = qs.order_by("title")
+    paginator = Paginator(qs, 12)
+    page = paginator.get_page(request.GET.get("page", 1))
+    categories = Category.objects.filter(books__is_digital=True).distinct().order_by("name")
+    wishlist_book_ids = set()
+    if request.user.is_authenticated:
+        wishlist_book_ids = set(Wishlist.objects.filter(user=request.user).values_list("book_id", flat=True))
+
+    context = {
+        "page": page,
+        "books": page.object_list,
+        "categories": categories,
+        "search": search,
+        "current_category_id": current_category_id,
+        "current_access": access,
+        "wishlist_book_ids": wishlist_book_ids,
+    }
+    return render(request, "books/ebook_list.html", context)
+
+
 def category_list(request):
     categories = Category.objects.annotate(book_count=Count("books")).order_by("name")
     return render(request, "books/category_list.html", {"categories": categories})

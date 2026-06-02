@@ -117,6 +117,56 @@ class BasicFlowTest(TestCase):
         self.assertContains(response, reverse("read_book", args=[self.book.id]))
         self.assertContains(response, "Đọc sách")
 
+    def test_ebook_list_only_shows_digital_books(self):
+        ebook = Book.objects.create(
+            title="Python Online Reader",
+            author="Bookie",
+            price=0,
+            category=self.category,
+            is_digital=True,
+            content_text="Trang 1",
+        )
+
+        response = self.client.get(reverse("ebook_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, ebook.title)
+        self.assertContains(response, reverse("read_book", args=[ebook.pk]))
+        self.assertNotContains(response, self.book.title)
+
+    def test_ebook_list_filters_free_and_paid_books(self):
+        free_book = Book.objects.create(
+            title="Free Django Ebook",
+            author="Bookie",
+            price=0,
+            category=self.category,
+            is_digital=True,
+            content_text="Trang 1",
+        )
+        paid_book = Book.objects.create(
+            title="Paid Django Ebook",
+            author="Bookie",
+            price=120000,
+            category=self.category,
+            is_digital=True,
+            content_text="Trang 1",
+        )
+
+        response = self.client.get(reverse("ebook_list"), {"access": "free"})
+        self.assertContains(response, free_book.title)
+        self.assertNotContains(response, paid_book.title)
+
+        response = self.client.get(reverse("ebook_list"), {"access": "paid"})
+        self.assertContains(response, paid_book.title)
+        self.assertNotContains(response, free_book.title)
+
+    def test_navbar_links_to_ebook_list(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("ebook_list"))
+        self.assertContains(response, "Đọc sách online")
+
     def test_reader_redirects_for_non_digital_book(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("read_book", args=[self.book.id]))
