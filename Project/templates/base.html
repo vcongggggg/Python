@@ -1116,6 +1116,7 @@
             50% { transform: translateY(-14px); }
         }
     </style>
+    {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100 {% block body_class %}{% endblock %}">

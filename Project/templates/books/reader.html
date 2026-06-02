@@ -275,9 +275,21 @@
         border-color: var(--accent);
         box-shadow: 0 0 0 3px rgba(192,86,33,.14);
     }
-    .page-list {
+    .page-jump-controls {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+        grid-template-columns: 1fr auto;
+        gap: .5rem;
+        align-items: center;
+        margin-bottom: .75rem;
+    }
+    .page-jump-controls .form-control {
+        background: var(--reader-control);
+        border-color: var(--reader-border);
+        color: var(--reader-text);
+    }
+    .page-list {
+        display: flex;
+        flex-wrap: wrap;
         gap: .45rem;
     }
     .page-jump {
@@ -286,6 +298,8 @@
         color: var(--reader-text);
         border-radius: 8px;
         height: 38px;
+        min-width: 46px;
+        padding: 0 .65rem;
         font-weight: 800;
     }
     .page-jump.active {
@@ -412,6 +426,11 @@
             </div>
             <div class="reader-setting">
                 <label>Chuyển nhanh</label>
+                <div class="page-jump-controls">
+                    <input type="number" class="form-control" id="pageNumberInput" min="1" max="{{ total_pages }}" value="{{ current_page }}">
+                    <button type="button" class="reader-theme-btn" id="jumpPageBtn">Đi</button>
+                </div>
+                <input type="range" class="form-range" min="1" max="{{ total_pages }}" value="{{ current_page }}" id="pageRange">
                 <div class="page-list" id="pageList"></div>
             </div>
         </div>
@@ -439,6 +458,8 @@
     const nextBtn = document.getElementById("nextBtn");
     const panel = document.getElementById("readerPanel");
     const pageList = document.getElementById("pageList");
+    const pageNumberInput = document.getElementById("pageNumberInput");
+    const pageRange = document.getElementById("pageRange");
     const fontSizeRange = document.getElementById("fontSizeRange");
     const widthRange = document.getElementById("widthRange");
     const settingKey = `bookie_reader_settings_${bookId}`;
@@ -447,6 +468,8 @@
     const readableTotal = isPreview ? Math.max(1, totalPages - 1) : totalPages;
     let currentPage = Number(localStorage.getItem(progressKey)) || {{ current_page }};
     currentPage = Math.min(Math.max(1, currentPage), totalPages);
+    pageNumberInput.max = totalPages;
+    pageRange.max = totalPages;
 
     function getSettings() {
         try {
@@ -516,10 +539,36 @@
         }).catch(() => {});
     }
 
+    function nearbyPageNumbers() {
+        const pages = new Set([1, totalPages, currentPage]);
+        for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+            if (i >= 1 && i <= totalPages) pages.add(i);
+        }
+        return Array.from(pages).sort((a, b) => a - b);
+    }
+
     function updatePageList() {
-        pageList.querySelectorAll(".page-jump").forEach((btn) => {
-            btn.classList.toggle("active", Number(btn.dataset.page) === currentPage);
+        pageList.innerHTML = "";
+        nearbyPageNumbers().forEach((pageNum, index, arr) => {
+            if (index > 0 && pageNum - arr[index - 1] > 1) {
+                const gap = document.createElement("span");
+                gap.className = "d-inline-flex align-items-center px-1";
+                gap.textContent = "...";
+                pageList.appendChild(gap);
+            }
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "page-jump";
+            btn.classList.toggle("active", pageNum === currentPage);
+            btn.textContent = isPreview && pageNum === totalPages ? "Mở" : pageNum;
+            btn.addEventListener("click", () => {
+                goToPage(pageNum);
+                panel.classList.remove("show");
+            });
+            pageList.appendChild(btn);
         });
+        pageNumberInput.value = currentPage;
+        pageRange.value = currentPage;
     }
 
     function updateUI() {
@@ -549,21 +598,19 @@
         updateUI();
     }
 
-    for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "page-jump";
-        btn.dataset.page = i;
-        btn.textContent = isPreview && i === totalPages ? "Mở" : i;
-        btn.addEventListener("click", () => {
-            goToPage(i);
-            panel.classList.remove("show");
-        });
-        pageList.appendChild(btn);
-    }
-
     prevBtn.addEventListener("click", () => goToPage(currentPage - 1));
     nextBtn.addEventListener("click", () => goToPage(currentPage + 1));
+    document.getElementById("jumpPageBtn").addEventListener("click", () => {
+        goToPage(Number(pageNumberInput.value || currentPage));
+        panel.classList.remove("show");
+    });
+    pageNumberInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            goToPage(Number(pageNumberInput.value || currentPage));
+            panel.classList.remove("show");
+        }
+    });
+    pageRange.addEventListener("input", () => goToPage(Number(pageRange.value)));
     document.getElementById("togglePanelBtn").addEventListener("click", () => panel.classList.add("show"));
     document.getElementById("closePanelBtn").addEventListener("click", () => panel.classList.remove("show"));
     document.getElementById("decreaseFontBtn").addEventListener("click", () => {

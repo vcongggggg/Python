@@ -125,6 +125,7 @@ class BasicFlowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertGreater(response.context["total_pages"], 1)
+        self.assertContains(response, "body.reader-mode")
         self.assertContains(response, "reader-panel")
 
     def test_digital_book_detail_shows_read_button(self):
